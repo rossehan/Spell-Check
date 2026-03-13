@@ -20,16 +20,16 @@
 
 ## Completed Features
 1. Dashboard with 2 tabs: Dashboard, Browse & Search (merged)
-2. 50 supplement categories with real SP-API data
+2. 100 supplement categories with real SP-API data (expanded from 50)
 3. Top 100 Products by Sales Rank (clickable -> detail modal)
 4. Product images (64px thumbnail) in Top 100 list
 5. Amazon link button (orange arrow) on each product row
-6. ProductModal with price, rank, ASIN, bullet points, Amazon link
+6. ProductModal with price, rank, ASIN, bullet points, Amazon link, form type
 7. 30-minute auto-refresh with countdown timer (Next Refresh card)
 8. Status badge shows LIVE/DEMO + last update time in header
 9. .env file with SP-API credentials (local only)
 10. .gitignore protects .env from being pushed
-11. Dashboard section order: Top 100 -> Top Brands -> Products by Category -> Avg Price -> Price Distribution + Category Table
+11. 3-Section dashboard structure: Section A (Market Overview), Section B (Product Deep-dive), Section C (Opportunity Finder)
 12. Top 100 has scrollable container (600px max, no page scroll needed)
 13. Estimated daily sales based on BSR rank shown in Top 100 (blue badge ~X sales/day)
 14. Refresh button moved to header next to LIVE badge
@@ -43,6 +43,14 @@
 22. BI metrics computed from SP-API data: estimatedMonthlyRevenue, avgDailySales, brandCount, HHI, topBrand, topBrandShare, priceSpread
 23. Market Opportunity Score = demand(30%) + competition(25%) + priceRoom(20%) + revenue(25%)
 24. HHI (Herfindahl-Hirschman Index): <1500=Low competition, 1500-2500=Mid, >2500=High (hard to enter)
+25. White/light theme UI (changed from dark theme)
+26. Trend hashtag rolling banner under Opportunity Score (#Magnesium, #GutHealth, #Fiber, etc.)
+27. Competition Analysis with expandable product list (click to see top products per category)
+28. Form Analysis (Dosage Type) section: Gummy, Capsule, Softgel, Tablet, Powder, Liquid, etc.
+29. Form extraction from product title using regex patterns
+30. Ingredient extraction from product title using regex patterns
+31. Keyword filtering in dashboard (filter categories by keyword like "Peptide", "Gummy", etc.)
+32. New categories added: Lutein, Astaxanthin, DHEA, 5-HTP, L-Theanine, L-Carnitine, ALA, NAC, DIM, Tribulus, Tongkat Ali, Shilajit, Cordyceps, Chaga, Turkey Tail, Moringa, Sea Moss, Olive Leaf, Oregano Oil, Vitamin A, Folate, Chromium, Iodine, Boron, Copper, Inositol, PQQ, NMN, Hyaluronic Acid, Keratin, MSM, Chondroitin, Bromelain, Psyllium Husk, Bovine Colostrum, Beta Alanine, Citrulline, Electrolytes, Whey Protein, Casein, Pea Protein, Hemp Protein, Fish Oil, Krill Oil, Evening Primrose, Black Cohosh, St. John's Wort, Bilberry
 
 ## SP-API Data Structure (CRITICAL - DO NOT FORGET)
 - **Price**: `list_price[0].value` is a direct NUMBER (e.g. 17.98), NOT `{amount: "xx.xx"}`
@@ -75,8 +83,8 @@
 - GET `/api/categories` - List all categories
 - GET `/api/debug` - Debug SP-API response structure
 
-## Category Keywords (50 categories)
-vitamins, protein, omega, probiotics, collagen, magnesium, vitaminD, vitaminC, zinc, iron, calcium, biotin, melatonin, ashwagandha, creatine, turmeric, elderberry, fiber, multivitamin, bcaa, glutamine, coq10, vitaminB, vitaminE, vitaminK, potassium, selenium, manganese, lysine, glucosamine, spirulina, chlorella, echinacea, ginseng, garlic, greenTea, appleCiderVinegar, maca, saw_palmetto, milk_thistle, rhodiola, valerian, fenugreek, black_seed_oil, quercetin, resveratrol, lions_mane, reishi, berberine, digestive_enzymes
+## Category Keywords (100 categories)
+vitamins, protein, omega, probiotics, collagen, magnesium, vitaminD, vitaminC, zinc, iron, calcium, biotin, melatonin, ashwagandha, creatine, turmeric, elderberry, fiber, multivitamin, bcaa, glutamine, coq10, vitaminB, vitaminE, vitaminK, potassium, selenium, manganese, lysine, glucosamine, spirulina, chlorella, echinacea, ginseng, garlic, greenTea, appleCiderVinegar, maca, saw_palmetto, milk_thistle, rhodiola, valerian, fenugreek, black_seed_oil, quercetin, resveratrol, lions_mane, reishi, berberine, digestive_enzymes, lutein, astaxanthin, dhea, five_htp, l_theanine, l_carnitine, alpha_lipoic_acid, nac, dim, tribulus, tongkat_ali, shilajit, cordyceps, chaga, turkey_tail, moringa, sea_moss, olive_leaf, oregano_oil, vitamin_a, folate, chromium, iodine, boron, copper, inositol, pqq, nmn, hyaluronic_acid, keratin, msm, chondroitin, bromelain, psyllium_husk, bovine_colostrum, beta_alanine, citrulline, electrolytes, whey_protein, casein, pea_protein, hemp_protein, fish_oil, krill_oil, evening_primrose, black_cohosh, st_johns_wort, bilberry
 
 ## How to Update Files on Local PC
 ```powershell

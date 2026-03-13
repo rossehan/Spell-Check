@@ -162,7 +162,31 @@ const CATEGORY_KEYWORDS = {
   fenugreek: 'fenugreek supplement', black_seed_oil: 'black seed oil supplement',
   quercetin: 'quercetin supplement', resveratrol: 'resveratrol supplement',
   lions_mane: 'lions mane mushroom supplement', reishi: 'reishi mushroom supplement',
-  berberine: 'berberine supplement', digestive_enzymes: 'digestive enzymes supplement'
+  berberine: 'berberine supplement', digestive_enzymes: 'digestive enzymes supplement',
+  lutein: 'lutein eye supplement', astaxanthin: 'astaxanthin supplement',
+  dhea: 'dhea supplement', five_htp: '5-htp supplement',
+  l_theanine: 'l-theanine supplement', l_carnitine: 'l-carnitine supplement',
+  alpha_lipoic_acid: 'alpha lipoic acid supplement', nac: 'nac n-acetyl cysteine supplement',
+  dim: 'dim supplement', tribulus: 'tribulus supplement',
+  tongkat_ali: 'tongkat ali supplement', shilajit: 'shilajit supplement',
+  cordyceps: 'cordyceps mushroom supplement', chaga: 'chaga mushroom supplement',
+  turkey_tail: 'turkey tail mushroom supplement', moringa: 'moringa supplement',
+  sea_moss: 'sea moss supplement', olive_leaf: 'olive leaf extract supplement',
+  oregano_oil: 'oregano oil supplement', vitamin_a: 'vitamin a supplement',
+  folate: 'folate folic acid supplement', chromium: 'chromium supplement',
+  iodine: 'iodine supplement', boron: 'boron supplement',
+  copper: 'copper supplement', inositol: 'inositol supplement',
+  pqq: 'pqq supplement', nmn: 'nmn supplement',
+  hyaluronic_acid: 'hyaluronic acid supplement', keratin: 'keratin supplement',
+  msm: 'msm supplement', chondroitin: 'chondroitin supplement',
+  bromelain: 'bromelain supplement', psyllium_husk: 'psyllium husk fiber',
+  bovine_colostrum: 'bovine colostrum supplement', beta_alanine: 'beta alanine supplement',
+  citrulline: 'citrulline supplement', electrolytes: 'electrolyte supplement',
+  whey_protein: 'whey protein powder', casein: 'casein protein powder',
+  pea_protein: 'pea protein powder', hemp_protein: 'hemp protein powder',
+  fish_oil: 'fish oil supplement', krill_oil: 'krill oil supplement',
+  evening_primrose: 'evening primrose oil supplement', black_cohosh: 'black cohosh supplement',
+  st_johns_wort: 'st johns wort supplement', bilberry: 'bilberry extract supplement'
 };
 
 app.get('/api/categories', (req, res) => {
