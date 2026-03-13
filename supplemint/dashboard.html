@@ -270,6 +270,24 @@ const TREND_HASHTAGS = [
   "#PlantBased", "#Vegan", "#OrganicSupplements", "#CleanLabel",
 ];
 
+function CategoryLoadingSpinner() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % CATEGORIES.length), 800);
+    return () => clearInterval(t);
+  }, []);
+  const cat = CATEGORIES[idx];
+  return (
+    <div style={{ textAlign: "center", padding: 80 }}>
+      <div style={{ fontSize: 52, marginBottom: 10, transition: "all 0.3s ease" }}>{cat.icon}</div>
+      <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", marginBottom: 14, transition: "all 0.3s ease" }}>{cat.name}</div>
+      <div style={{ width: 40, height: 40, border: "3px solid rgba(16,185,129,0.2)", borderTopColor: "#10b981", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+      <div style={{ color: "#64748b" }}>Analyzing all categories from Amazon SP-API...</div>
+      <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 8 }}>{idx + 1} / {CATEGORIES.length} categories</div>
+    </div>
+  );
+}
+
 function SuppleMint() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [activeCategory, setActiveCategory] = useState("vitamins");
@@ -608,11 +626,7 @@ function SuppleMint() {
 
             {/* Keyword Filter removed - now integrated into Top 100 category filter */}
 
-            {trendsLoading && !trends ? (
-              <div style={{ textAlign: "center", padding: 80 }}>
-                <div style={{ width: 40, height: 40, border: "3px solid rgba(16,185,129,0.2)", borderTopColor: "#10b981", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-                <div style={{ color: "#64748b" }}>Analyzing all categories from Amazon SP-API...</div>
-              </div>
+            {trendsLoading && !trends ? <CategoryLoadingSpinner />
             ) : trends ? (() => {
               const cats = trends.categories || {};
               let catEntries = Object.entries(cats);
