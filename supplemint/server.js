@@ -195,6 +195,21 @@ app.get('/api/products/:categoryId', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Debug endpoint - shows raw SP-API response for first item
+app.get('/api/debug', async (req, res) => {
+  try {
+    const result = await spApiGet(`/catalog/2022-04-01/items?keywords=vitamin+supplements&marketplaceIds=${MARKETPLACE_ID}&includedData=summaries,attributes,salesRanks,images`);
+    const items = result.data?.items || [];
+    res.json({
+      totalItems: items.length,
+      numberOfResults: result.data?.numberOfResults,
+      firstItem: items[0] || null,
+      firstItemAttributes: items[0]?.attributes || null,
+      allAttributeKeys: items[0]?.attributes ? Object.keys(items[0].attributes) : [],
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 SuppleMint Backend running on http://localhost:${PORT}`);
   console.log(`📋 Mode: LIVE (SP-API direct HTTP)`);
