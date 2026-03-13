@@ -44,6 +44,26 @@ const CATEGORIES = [
   { id: "fiber", name: "Fiber", icon: "\u{1F33E}" },
   { id: "multivitamin", name: "Multivitamin", icon: "\u{1F48E}" },
   { id: "bcaa", name: "BCAA", icon: "\u{1F525}" },
+  { id: "glutamine", name: "Glutamine", icon: "\u{1F9EC}" },
+  { id: "coq10", name: "CoQ10", icon: "\u2764\uFE0F" },
+  { id: "vitaminB", name: "Vitamin B", icon: "\u{1F7E2}" },
+  { id: "vitaminE", name: "Vitamin E", icon: "\u{1F331}" },
+  { id: "vitaminK", name: "Vitamin K", icon: "\u{1F49A}" },
+  { id: "potassium", name: "Potassium", icon: "\u{1F34C}" },
+  { id: "selenium", name: "Selenium", icon: "\u{1F30D}" },
+  { id: "manganese", name: "Manganese", icon: "\u2699\uFE0F" },
+  { id: "lysine", name: "Lysine", icon: "\u{1F9EA}" },
+  { id: "glucosamine", name: "Glucosamine", icon: "\u{1F9B5}" },
+  { id: "spirulina", name: "Spirulina", icon: "\u{1F33F}" },
+  { id: "chlorella", name: "Chlorella", icon: "\u{1F343}" },
+  { id: "echinacea", name: "Echinacea", icon: "\u{1F33B}" },
+  { id: "ginseng", name: "Ginseng", icon: "\u{1F33F}" },
+  { id: "garlic", name: "Garlic", icon: "\u{1F9C4}" },
+  { id: "greenTea", name: "Green Tea", icon: "\u{1F375}" },
+  { id: "appleCiderVinegar", name: "Apple Cider Vinegar", icon: "\u{1F34F}" },
+  { id: "maca", name: "Maca", icon: "\u{1F30B}" },
+  { id: "saw_palmetto", name: "Saw Palmetto", icon: "\u{1F334}" },
+  { id: "milk_thistle", name: "Milk Thistle", icon: "\u{1F33C}" },
 ];
 
 const ALL_BRANDS = ["Nature's Bounty", "NOW Foods", "Garden of Life", "Optimum Nutrition", "Vital Proteins",
@@ -557,64 +577,89 @@ function SuppleMint() {
                     </div>
                   </div>
 
-                  {/* Top Brands */}
+                  {/* Top Brands - table format */}
                   <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 36 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Top Brands (by estimated revenue)</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {topBrands.map(([brand, data], i) => (
-                        <div key={brand} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div style={{ width: 18, fontSize: 11, color: "#475569", textAlign: "right", flexShrink: 0 }}>{i + 1}</div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                              <span style={{ fontSize: 12, color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{brand}</span>
-                              <span style={{ fontSize: 11, color: "#64748b" }}>${data.revenue.toFixed(0)} &middot; {data.count} products</span>
-                            </div>
-                            <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: 3, height: 6, overflow: "hidden" }}>
-                              <div style={{ width: `${(data.revenue / maxBrandRevenue) * 100}%`, height: "100%", background: COLORS[i % COLORS.length], borderRadius: 3 }} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 16 }}>Top Brands</h3>
+                    <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                            {["#", "Brand", "Products", "Total Revenue"].map(h => (
+                              <th key={h} style={{ padding: "8px 12px", textAlign: h === "#" ? "center" : "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, position: "sticky", top: 0, background: "#0f172a" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topBrands.map(([brand, data], i) => (
+                            <tr key={brand} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
+                              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                              <td style={{ padding: "8px 12px", textAlign: "center", color: i < 3 ? "#fbbf24" : "#475569", fontWeight: 700, fontSize: 13 }}>{i + 1}</td>
+                              <td style={{ padding: "8px 12px", color: "#e2e8f0", fontWeight: 500, fontSize: 13 }}>{brand}</td>
+                              <td style={{ padding: "8px 12px", color: "#94a3b8", fontSize: 13 }}>{data.count}</td>
+                              <td style={{ padding: "8px 12px", color: COLORS[i % COLORS.length], fontWeight: 600, fontSize: 13 }}>${data.revenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 
-                  {/* Charts Row: Products by Category + Average Price */}
+                  {/* Category Tables Row */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 36 }}>
-                    {/* Category Product Count Chart */}
+                    {/* Products by Category - ranked table */}
                     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Products by Category</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {catEntries.map(([catId, c], i) => {
-                          const cat = CATEGORIES.find(ct => ct.id === catId);
-                          return (
-                            <div key={catId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <div style={{ width: 100, fontSize: 11, color: "#94a3b8", textAlign: "right", flexShrink: 0 }}>{cat?.icon} {cat?.name || catId}</div>
-                              <div style={{ flex: 1, background: "rgba(255,255,255,0.05)", borderRadius: 4, height: 22, overflow: "hidden" }}>
-                                <div style={{ width: `${(c.totalProducts / maxProducts) * 100}%`, height: "100%", background: `linear-gradient(90deg, ${COLORS[i % COLORS.length]}88, ${COLORS[i % COLORS.length]})`, borderRadius: 4, transition: "width 0.8s ease" }} />
-                              </div>
-                              <div style={{ width: 55, fontSize: 12, fontWeight: 600, color: COLORS[i % COLORS.length], textAlign: "right" }}>{c.totalProducts.toLocaleString()}</div>
-                            </div>
-                          );
-                        })}
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 16 }}>Products by Category</h3>
+                      <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                              {["#", "Category", "Products"].map(h => (
+                                <th key={h} style={{ padding: "8px 10px", textAlign: h === "#" ? "center" : "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, position: "sticky", top: 0, background: "#0f172a" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...catEntries].sort((a, b) => b[1].totalProducts - a[1].totalProducts).map(([catId, c], i) => {
+                              const cat = CATEGORIES.find(ct => ct.id === catId);
+                              return (
+                                <tr key={catId} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                                  <td style={{ padding: "8px 10px", textAlign: "center", color: i < 3 ? "#fbbf24" : "#475569", fontWeight: 700, fontSize: 13 }}>{i + 1}</td>
+                                  <td style={{ padding: "8px 10px", color: "#e2e8f0", fontSize: 13 }}>{cat?.icon} {cat?.name || catId}</td>
+                                  <td style={{ padding: "8px 10px", color: COLORS[i % COLORS.length], fontWeight: 600, fontSize: 13 }}>{c.totalProducts.toLocaleString()}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
 
-                    {/* Category Avg Price Chart */}
+                    {/* Average Price by Category - ranked table */}
                     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Average Price by Category</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {catEntries.map(([catId, c], i) => {
-                          const cat = CATEGORIES.find(ct => ct.id === catId);
-                          return (
-                            <div key={catId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <div style={{ width: 100, fontSize: 11, color: "#94a3b8", textAlign: "right", flexShrink: 0 }}>{cat?.icon} {cat?.name || catId}</div>
-                              <div style={{ flex: 1, background: "rgba(255,255,255,0.05)", borderRadius: 4, height: 22, overflow: "hidden" }}>
-                                <div style={{ width: `${(c.avgPrice / maxAvgPrice) * 100}%`, height: "100%", background: `linear-gradient(90deg, ${COLORS[i % COLORS.length]}88, ${COLORS[i % COLORS.length]})`, borderRadius: 4, transition: "width 0.8s ease" }} />
-                              </div>
-                              <div style={{ width: 55, fontSize: 12, fontWeight: 600, color: COLORS[i % COLORS.length], textAlign: "right" }}>${c.avgPrice}</div>
-                            </div>
-                          );
-                        })}
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 16 }}>Average Price by Category</h3>
+                      <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                              {["#", "Category", "Avg Price"].map(h => (
+                                <th key={h} style={{ padding: "8px 10px", textAlign: h === "#" ? "center" : "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, position: "sticky", top: 0, background: "#0f172a" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...catEntries].sort((a, b) => b[1].avgPrice - a[1].avgPrice).map(([catId, c], i) => {
+                              const cat = CATEGORIES.find(ct => ct.id === catId);
+                              return (
+                                <tr key={catId} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                                  <td style={{ padding: "8px 10px", textAlign: "center", color: i < 3 ? "#fbbf24" : "#475569", fontWeight: 700, fontSize: 13 }}>{i + 1}</td>
+                                  <td style={{ padding: "8px 10px", color: "#e2e8f0", fontSize: 13 }}>{cat?.icon} {cat?.name || catId}</td>
+                                  <td style={{ padding: "8px 10px", color: COLORS[i % COLORS.length], fontWeight: 600, fontSize: 13 }}>${c.avgPrice}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </div>

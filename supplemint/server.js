@@ -83,6 +83,16 @@ function extractRank(salesRanks) {
   return rank || null;
 }
 
+function estimateDailySales(rank) {
+  if (!rank || rank <= 0) return 0;
+  if (rank <= 5) return Math.round(300 + (5 - rank) * 100);
+  if (rank <= 50) return Math.round(200 * Math.pow(rank / 5, -0.6));
+  if (rank <= 500) return Math.round(80 * Math.pow(rank / 50, -0.5));
+  if (rank <= 5000) return Math.round(25 * Math.pow(rank / 500, -0.45));
+  if (rank <= 50000) return Math.round(8 * Math.pow(rank / 5000, -0.4));
+  return Math.max(1, Math.round(3 * Math.pow(rank / 50000, -0.35)));
+}
+
 function extractPrice(attrs) {
   const lp = attrs?.list_price?.[0];
   if (lp) {
@@ -137,7 +147,17 @@ const CATEGORY_KEYWORDS = {
   melatonin: 'melatonin supplement', ashwagandha: 'ashwagandha supplement',
   creatine: 'creatine supplement', turmeric: 'turmeric curcumin supplement',
   elderberry: 'elderberry supplement', fiber: 'fiber supplement',
-  multivitamin: 'multivitamin supplement', bcaa: 'bcaa supplement'
+  multivitamin: 'multivitamin supplement', bcaa: 'bcaa supplement',
+  glutamine: 'glutamine supplement', coq10: 'coq10 supplement',
+  vitaminB: 'vitamin b complex', vitaminE: 'vitamin e supplement',
+  vitaminK: 'vitamin k2', potassium: 'potassium supplement',
+  selenium: 'selenium supplement', manganese: 'manganese supplement',
+  lysine: 'l-lysine supplement', glucosamine: 'glucosamine chondroitin',
+  spirulina: 'spirulina supplement', chlorella: 'chlorella supplement',
+  echinacea: 'echinacea supplement', ginseng: 'ginseng supplement',
+  garlic: 'garlic supplement', greenTea: 'green tea extract supplement',
+  appleCiderVinegar: 'apple cider vinegar supplement', maca: 'maca root supplement',
+  saw_palmetto: 'saw palmetto supplement', milk_thistle: 'milk thistle supplement'
 };
 
 app.get('/api/categories', (req, res) => {
@@ -168,9 +188,12 @@ app.get('/api/trends', async (req, res) => {
         items.forEach(p => {
           const brand = p.attributes?.brand?.[0]?.value || 'Unknown';
           const priceVal = extractPrice(p.attributes) || 0;
+          const rank = extractRank(p.salesRanks);
+          const dailySales = estimateDailySales(rank);
+          const monthlyRevenue = priceVal * dailySales * 30;
           if (!brands[brand]) brands[brand] = { count: 0, revenue: 0 };
           brands[brand].count += 1;
-          brands[brand].revenue += priceVal;
+          brands[brand].revenue += monthlyRevenue;
         });
         results[id] = {
           totalProducts: data.numberOfResults || items.length,
