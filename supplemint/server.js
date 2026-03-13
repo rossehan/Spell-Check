@@ -200,6 +200,19 @@ app.get('/api/trends', async (req, res) => {
           brands[brand].count += 1;
           brands[brand].revenue += monthlyRevenue;
         });
+        // BI metrics
+        const totalCatRevenue = Object.values(brands).reduce((sum, b) => sum + b.revenue, 0);
+        const dailySalesArr = ranks.map(r => estimateDailySales(r));
+        const avgDailySales = dailySalesArr.length ? Math.round(dailySalesArr.reduce((a, b) => a + b, 0) / dailySalesArr.length) : 0;
+        const brandCount = Object.keys(brands).length;
+        const totalBrandProducts = Object.values(brands).reduce((sum, b) => sum + b.count, 0);
+        const hhi = totalBrandProducts > 0 ? Math.round(Object.values(brands).reduce((sum, b) => {
+          const share = (b.count / totalBrandProducts) * 100;
+          return sum + share * share;
+        }, 0)) : 0;
+        const topBrandEntry = Object.entries(brands).sort((a, b) => b[1].revenue - a[1].revenue)[0];
+        const topBrandShare = topBrandEntry && totalCatRevenue > 0 ? Math.round((topBrandEntry[1].revenue / totalCatRevenue) * 100) : 0;
+
         results[id] = {
           totalProducts: data.numberOfResults || items.length,
           itemCount: items.length,
@@ -207,6 +220,13 @@ app.get('/api/trends', async (req, res) => {
           minPrice: prices.length ? Math.min(...prices) : 0,
           maxPrice: prices.length ? Math.max(...prices) : 0,
           avgRank: ranks.length ? Math.round(ranks.reduce((a, b) => a + b, 0) / ranks.length) : 0,
+          estimatedMonthlyRevenue: Math.round(totalCatRevenue),
+          avgDailySales,
+          brandCount,
+          hhi,
+          topBrand: topBrandEntry ? topBrandEntry[0] : 'N/A',
+          topBrandShare,
+          priceSpread: prices.length ? +(Math.max(...prices) - Math.min(...prices)).toFixed(2) : 0,
           brands,
           topProducts: items
             .map(p => ({

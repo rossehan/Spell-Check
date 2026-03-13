@@ -615,6 +615,124 @@ function SuppleMint() {
                     </div>
                   </div>
 
+                  {/* Market Intelligence Section */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 36 }}>
+                    {/* Category Revenue Ranking */}
+                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>Category Revenue Ranking</h3>
+                      <p style={{ fontSize: 11, color: "#64748b", marginBottom: 16 }}>BSR based estimated monthly revenue</p>
+                      <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                              {["#", "Category", "Est. Monthly Revenue", "Avg Sales/Day"].map(h => (
+                                <th key={h} style={{ padding: "8px 10px", textAlign: h === "#" ? "center" : "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, position: "sticky", top: 0, background: "#0f172a" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...catEntries].sort((a, b) => (b[1].estimatedMonthlyRevenue || 0) - (a[1].estimatedMonthlyRevenue || 0)).map(([catId, c], i) => {
+                              const cat = CATEGORIES.find(ct => ct.id === catId);
+                              return (
+                                <tr key={catId} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                                  <td style={{ padding: "8px 10px", textAlign: "center", color: i < 3 ? "#fbbf24" : "#475569", fontWeight: 700, fontSize: 13 }}>{i + 1}</td>
+                                  <td style={{ padding: "8px 10px", color: "#e2e8f0", fontSize: 13 }}>{cat?.icon} {cat?.name || catId}</td>
+                                  <td style={{ padding: "8px 10px", color: "#6ee7b7", fontWeight: 600, fontSize: 13 }}>${(c.estimatedMonthlyRevenue || 0).toLocaleString()}</td>
+                                  <td style={{ padding: "8px 10px", color: "#38bdf8", fontSize: 13 }}>~{c.avgDailySales || 0}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Competition Analysis */}
+                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>Competition Analysis</h3>
+                      <p style={{ fontSize: 11, color: "#64748b", marginBottom: 16 }}>Brand concentration & market entry difficulty</p>
+                      <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                              {["Category", "Brands", "HHI", "Top Brand", "Share"].map(h => (
+                                <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, position: "sticky", top: 0, background: "#0f172a" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...catEntries].sort((a, b) => (a[1].hhi || 0) - (b[1].hhi || 0)).map(([catId, c], i) => {
+                              const cat = CATEGORIES.find(ct => ct.id === catId);
+                              const hhiVal = c.hhi || 0;
+                              const hhiColor = hhiVal < 1500 ? "#6ee7b7" : hhiVal < 2500 ? "#fbbf24" : "#f472b6";
+                              const hhiLabel = hhiVal < 1500 ? "Low" : hhiVal < 2500 ? "Mid" : "High";
+                              return (
+                                <tr key={catId} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                                  <td style={{ padding: "8px 10px", color: "#e2e8f0", fontWeight: 600, fontSize: 12 }}>{cat?.icon} {cat?.name || catId}</td>
+                                  <td style={{ padding: "8px 10px", color: "#94a3b8", fontSize: 13 }}>{c.brandCount || Object.keys(c.brands).length}</td>
+                                  <td style={{ padding: "8px 10px" }}>
+                                    <span style={{ color: hhiColor, fontWeight: 600, fontSize: 12 }}>{hhiVal.toLocaleString()}</span>
+                                    <span style={{ color: hhiColor, fontSize: 10, marginLeft: 4, opacity: 0.7 }}>({hhiLabel})</span>
+                                  </td>
+                                  <td style={{ padding: "8px 10px", color: "#e2e8f0", fontSize: 12 }}>{c.topBrand || 'N/A'}</td>
+                                  <td style={{ padding: "8px 10px", color: "#818cf8", fontWeight: 600, fontSize: 13 }}>{c.topBrandShare || 0}%</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Market Opportunity Score */}
+                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 36 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>Market Opportunity Score</h3>
+                    <p style={{ fontSize: 11, color: "#64748b", marginBottom: 16 }}>High demand + Low competition + Price room = High opportunity</p>
+                    <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                            {["#", "Category", "Opportunity", "Demand", "Competition", "Price Room", "Revenue"].map(h => (
+                              <th key={h} style={{ padding: "8px 10px", textAlign: h === "#" ? "center" : "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, position: "sticky", top: 0, background: "#0f172a" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(() => {
+                            const maxRev = Math.max(...catEntries.map(([,c]) => c.estimatedMonthlyRevenue || 0), 1);
+                            const maxSpread = Math.max(...catEntries.map(([,c]) => c.priceSpread || 0), 1);
+                            const scored = catEntries.map(([catId, c]) => {
+                              const demandScore = c.avgRank > 0 ? Math.max(0, 100 - Math.log10(c.avgRank) * 20) : 0;
+                              const compScore = c.hhi ? Math.max(0, 100 - (c.hhi / 100)) : 50;
+                              const priceScore = maxSpread > 0 ? ((c.priceSpread || 0) / maxSpread) * 100 : 0;
+                              const revenueScore = maxRev > 0 ? ((c.estimatedMonthlyRevenue || 0) / maxRev) * 100 : 0;
+                              const opportunity = Math.round(demandScore * 0.3 + compScore * 0.25 + priceScore * 0.2 + revenueScore * 0.25);
+                              return { catId, c, demandScore: Math.round(demandScore), compScore: Math.round(compScore), priceScore: Math.round(priceScore), revenueScore: Math.round(revenueScore), opportunity };
+                            }).sort((a, b) => b.opportunity - a.opportunity);
+                            return scored.map(({ catId, c, demandScore, compScore, priceScore, revenueScore, opportunity }, i) => {
+                              const cat = CATEGORIES.find(ct => ct.id === catId);
+                              const oppColor = opportunity >= 70 ? "#6ee7b7" : opportunity >= 50 ? "#fbbf24" : "#f472b6";
+                              return (
+                                <tr key={catId} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                                  <td style={{ padding: "8px 10px", textAlign: "center", color: i < 3 ? "#fbbf24" : "#475569", fontWeight: 700, fontSize: 13 }}>{i + 1}</td>
+                                  <td style={{ padding: "8px 10px", color: "#e2e8f0", fontSize: 13 }}>{cat?.icon} {cat?.name || catId}</td>
+                                  <td style={{ padding: "8px 10px" }}>
+                                    <span style={{ background: `${oppColor}22`, border: `1px solid ${oppColor}44`, borderRadius: 6, padding: "3px 8px", color: oppColor, fontWeight: 700, fontSize: 13 }}>{opportunity}</span>
+                                  </td>
+                                  <td style={{ padding: "8px 10px", color: "#38bdf8", fontSize: 12 }}>{demandScore}</td>
+                                  <td style={{ padding: "8px 10px", color: "#a78bfa", fontSize: 12 }}>{compScore}</td>
+                                  <td style={{ padding: "8px 10px", color: "#fbbf24", fontSize: 12 }}>{priceScore}</td>
+                                  <td style={{ padding: "8px 10px", color: "#6ee7b7", fontSize: 12 }}>{revenueScore}</td>
+                                </tr>
+                              );
+                            });
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
                   {/* Category Tables Row */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 36 }}>
                     {/* Products by Category - ranked table */}

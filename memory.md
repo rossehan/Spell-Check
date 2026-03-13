@@ -39,6 +39,10 @@
 18. All graph visualizations replaced with ranked number tables
 19. Revenue = price * dailySales * 30 (monthly)
 20. Browse & Search tabs merged into one combined tab
+21. Market Intelligence BI section: Category Revenue Ranking, Competition Analysis (HHI), Market Opportunity Score
+22. BI metrics computed from SP-API data: estimatedMonthlyRevenue, avgDailySales, brandCount, HHI, topBrand, topBrandShare, priceSpread
+23. Market Opportunity Score = demand(30%) + competition(25%) + priceRoom(20%) + revenue(25%)
+24. HHI (Herfindahl-Hirschman Index): <1500=Low competition, 1500-2500=Mid, >2500=High (hard to enter)
 
 ## SP-API Data Structure (CRITICAL - DO NOT FORGET)
 - **Price**: `list_price[0].value` is a direct NUMBER (e.g. 17.98), NOT `{amount: "xx.xx"}`
