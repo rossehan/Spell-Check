@@ -260,6 +260,18 @@ function SuppleMint() {
   };
   const getImage = (images) => images?.[0]?.images?.[0]?.link || null;
 
+  // Estimate daily sales from BSR (Health & Household category formula)
+  const estimateDailySales = (rank) => {
+    if (!rank || rank <= 0) return null;
+    // Approximate formula for Health & Household on Amazon US
+    if (rank <= 5) return Math.round(300 + (5 - rank) * 100);
+    if (rank <= 50) return Math.round(200 * Math.pow(rank / 5, -0.6));
+    if (rank <= 500) return Math.round(80 * Math.pow(rank / 50, -0.5));
+    if (rank <= 5000) return Math.round(25 * Math.pow(rank / 500, -0.45));
+    if (rank <= 50000) return Math.round(8 * Math.pow(rank / 5000, -0.4));
+    return Math.max(1, Math.round(3 * Math.pow(rank / 50000, -0.35)));
+  };
+
   const ProductCard = ({ product, onClick }) => {
     const title = getTitle(product.summaries);
     const brand = getBrand(product.attributes);
@@ -402,7 +414,14 @@ function SuppleMint() {
             <div style={{ fontSize: 11, color: "#475569", letterSpacing: 2, textTransform: "uppercase" }}>Amazon Market Intelligence</div>
           </div>
         </div>
-        <StatusBadge />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={() => { setTrends(null); setTimeout(loadTrends, 100); }} disabled={trendsLoading} style={{
+            background: "linear-gradient(135deg, #6ee7b7, #3b82f6)", border: "none", borderRadius: 8,
+            padding: "7px 14px", color: "#000", fontWeight: 700, cursor: "pointer", fontSize: 12,
+            opacity: trendsLoading ? 0.5 : 1
+          }}>{trendsLoading ? "..." : "\u{1F504} Refresh"}</button>
+          <StatusBadge />
+        </div>
       </div>
 
       {/* Nav */}
@@ -421,16 +440,9 @@ function SuppleMint() {
         {/* DASHBOARD TAB */}
         {activeTab === "dashboard" && (
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
-              <div>
-                <h1 style={{ fontSize: 28, fontWeight: 700, color: "#f1f5f9", marginBottom: 8 }}>Trend Analysis Dashboard</h1>
-                <p style={{ color: "#64748b" }}>Amazon US Dietary Supplement Market Intelligence</p>
-              </div>
-              <button onClick={() => { setTrends(null); setTimeout(loadTrends, 100); }} disabled={trendsLoading} style={{
-                background: "linear-gradient(135deg, #6ee7b7, #3b82f6)", border: "none", borderRadius: 10,
-                padding: "10px 20px", color: "#000", fontWeight: 700, cursor: "pointer", fontSize: 13,
-                opacity: trendsLoading ? 0.5 : 1
-              }}>{trendsLoading ? "Loading..." : "Refresh Data"}</button>
+            <div style={{ marginBottom: 32 }}>
+              <h1 style={{ fontSize: 28, fontWeight: 700, color: "#f1f5f9", marginBottom: 8 }}>Trend Analysis Dashboard</h1>
+              <p style={{ color: "#64748b" }}>Amazon US Dietary Supplement Market Intelligence</p>
             </div>
 
             {trendsLoading && !trends ? (
@@ -524,6 +536,12 @@ function SuppleMint() {
                                 <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{p.brand} &middot; {cat?.icon} {cat?.name}</div>
                               </div>
                               <div style={{ textAlign: "right", flexShrink: 0, display: "flex", alignItems: "center", gap: 14 }}>
+                                {(() => { const est = estimateDailySales(p.rank); return est ? (
+                                  <div style={{ background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: 8, padding: "6px 10px", textAlign: "center", minWidth: 60 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: "#38bdf8" }}>~{est}</div>
+                                    <div style={{ fontSize: 10, color: "#64748b" }}>sales/day</div>
+                                  </div>
+                                ) : null; })()}
                                 <div>
                                   <div style={{ fontSize: 15, fontWeight: 700, color: "#6ee7b7" }}>#{p.rank.toLocaleString()}</div>
                                   {p.price && <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 2 }}>${p.price.toFixed(2)}</div>}
