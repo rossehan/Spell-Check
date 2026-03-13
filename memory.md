@@ -22,6 +22,11 @@
 8. Status badge shows LIVE/DEMO + last update time
 9. .env file created with SP-API credentials
 10. .gitignore protects .env from being pushed
+11. Dashboard section order: Top 100 -> Top Brands -> Products by Category -> Avg Price
+12. Top 100 has scrollable container (no page scroll needed)
+13. Estimated daily sales based on BSR rank shown in Top 100
+14. Refresh button moved to header next to LIVE badge
+15. Larger product images (64px) and text in Top 100
 
 ## SP-API Data Structure Fixes (IMPORTANT)
 - Price: `list_price[0].value` is a direct NUMBER (not `{amount: "xx.xx"}`)
