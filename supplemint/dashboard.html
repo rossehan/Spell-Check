@@ -481,27 +481,89 @@ function SuppleMint() {
                     ))}
                   </div>
 
-                  {/* Charts Row */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 36 }}>
-                    {/* Category Avg Price Chart */}
-                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Average Price by Category</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {catEntries.map(([catId, c], i) => {
-                          const cat = CATEGORIES.find(ct => ct.id === catId);
+                  {/* Top 100 Products - scrollable container */}
+                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 36 }}>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9", marginBottom: 16 }}>Top 100 Products by Sales Rank</h3>
+                    <div style={{ maxHeight: 600, overflowY: "auto", borderRadius: 10, paddingRight: 4 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {topAll.map((p, i) => {
+                          const cat = CATEGORIES.find(ct => ct.id === p.category);
                           return (
-                            <div key={catId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <div style={{ width: 100, fontSize: 11, color: "#94a3b8", textAlign: "right", flexShrink: 0 }}>{cat?.icon} {cat?.name || catId}</div>
-                              <div style={{ flex: 1, background: "rgba(255,255,255,0.05)", borderRadius: 4, height: 22, overflow: "hidden" }}>
-                                <div style={{ width: `${(c.avgPrice / maxAvgPrice) * 100}%`, height: "100%", background: `linear-gradient(90deg, ${COLORS[i % COLORS.length]}88, ${COLORS[i % COLORS.length]})`, borderRadius: 4, transition: "width 0.8s ease" }} />
+                            <div key={p.asin} onClick={() => setSelectedProduct({
+                              asin: p.asin,
+                              summaries: [{ itemName: p.title }],
+                              attributes: {
+                                brand: [{ value: p.brand }],
+                                ...(p.price ? { list_price: [{ value: p.price }] } : {}),
+                              },
+                              salesRanks: p.rank ? [{ ranks: [{ rank: p.rank }] }] : [],
+                              images: p.image ? [{ images: [{ link: p.image }] }] : [],
+                            })} style={{
+                              display: "flex", alignItems: "center", gap: 16, padding: "14px 18px",
+                              background: i < 3 ? `rgba(${i === 0 ? "251,191,36" : i === 1 ? "192,192,192" : "205,127,50"},0.06)` : "transparent",
+                              border: "1px solid rgba(255,255,255,0.05)", borderRadius: 10,
+                              cursor: "pointer", transition: "all 0.2s",
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = i < 3 ? `rgba(${i === 0 ? "251,191,36" : i === 1 ? "192,192,192" : "205,127,50"},0.12)` : "rgba(255,255,255,0.05)"}
+                            onMouseLeave={e => e.currentTarget.style.background = i < 3 ? `rgba(${i === 0 ? "251,191,36" : i === 1 ? "192,192,192" : "205,127,50"},0.06)` : "transparent"}>
+                              <div style={{
+                                width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 15, fontWeight: 700, flexShrink: 0,
+                                background: i === 0 ? "rgba(251,191,36,0.2)" : i === 1 ? "rgba(192,192,192,0.2)" : i === 2 ? "rgba(205,127,50,0.2)" : "rgba(255,255,255,0.05)",
+                                color: i === 0 ? "#fbbf24" : i === 1 ? "#c0c0c0" : i === 2 ? "#cd7f32" : "#64748b"
+                              }}>{i + 1}</div>
+                              {p.image ? (
+                                <div style={{ width: 64, height: 64, borderRadius: 8, overflow: "hidden", background: "#1e293b", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  <img src={p.image} alt={p.title} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                                </div>
+                              ) : (
+                                <div style={{ width: 64, height: 64, borderRadius: 8, background: "#1e293b", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, color: "#334155" }}>{cat?.icon || "\u{1F4E6}"}</div>
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 15, color: "#e2e8f0", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
+                                <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{p.brand} &middot; {cat?.icon} {cat?.name}</div>
                               </div>
-                              <div style={{ width: 55, fontSize: 12, fontWeight: 600, color: COLORS[i % COLORS.length], textAlign: "right" }}>${c.avgPrice}</div>
+                              <div style={{ textAlign: "right", flexShrink: 0, display: "flex", alignItems: "center", gap: 14 }}>
+                                <div>
+                                  <div style={{ fontSize: 15, fontWeight: 700, color: "#6ee7b7" }}>#{p.rank.toLocaleString()}</div>
+                                  {p.price && <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 2 }}>${p.price.toFixed(2)}</div>}
+                                </div>
+                                <a href={`https://www.amazon.com/dp/${p.asin}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+                                  style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 8, background: "rgba(255,153,0,0.15)", color: "#ff9900", textDecoration: "none", fontSize: 16, flexShrink: 0 }}
+                                  title="View on Amazon">
+                                  {"\u2197"}
+                                </a>
+                              </div>
                             </div>
                           );
                         })}
                       </div>
                     </div>
+                  </div>
 
+                  {/* Top Brands */}
+                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 36 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Top Brands (by estimated revenue)</h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {topBrands.map(([brand, data], i) => (
+                        <div key={brand} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ width: 18, fontSize: 11, color: "#475569", textAlign: "right", flexShrink: 0 }}>{i + 1}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                              <span style={{ fontSize: 12, color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{brand}</span>
+                              <span style={{ fontSize: 11, color: "#64748b" }}>${data.revenue.toFixed(0)} &middot; {data.count} products</span>
+                            </div>
+                            <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: 3, height: 6, overflow: "hidden" }}>
+                              <div style={{ width: `${(data.revenue / maxBrandRevenue) * 100}%`, height: "100%", background: COLORS[i % COLORS.length], borderRadius: 3 }} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Charts Row: Products by Category + Average Price */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 36 }}>
                     {/* Category Product Count Chart */}
                     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
                       <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Products by Category</h3>
@@ -520,31 +582,29 @@ function SuppleMint() {
                         })}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Second Row: Brand Share + Price Distribution */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 36 }}>
-                    {/* Brand Market Share */}
+                    {/* Category Avg Price Chart */}
                     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Top Brands (by estimated revenue)</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {topBrands.map(([brand, data], i) => (
-                          <div key={brand} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ width: 18, fontSize: 11, color: "#475569", textAlign: "right", flexShrink: 0 }}>{i + 1}</div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                                <span style={{ fontSize: 12, color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{brand}</span>
-                                <span style={{ fontSize: 11, color: "#64748b" }}>${data.revenue.toFixed(0)} &middot; {data.count} products</span>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Average Price by Category</h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {catEntries.map(([catId, c], i) => {
+                          const cat = CATEGORIES.find(ct => ct.id === catId);
+                          return (
+                            <div key={catId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <div style={{ width: 100, fontSize: 11, color: "#94a3b8", textAlign: "right", flexShrink: 0 }}>{cat?.icon} {cat?.name || catId}</div>
+                              <div style={{ flex: 1, background: "rgba(255,255,255,0.05)", borderRadius: 4, height: 22, overflow: "hidden" }}>
+                                <div style={{ width: `${(c.avgPrice / maxAvgPrice) * 100}%`, height: "100%", background: `linear-gradient(90deg, ${COLORS[i % COLORS.length]}88, ${COLORS[i % COLORS.length]})`, borderRadius: 4, transition: "width 0.8s ease" }} />
                               </div>
-                              <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: 3, height: 6, overflow: "hidden" }}>
-                                <div style={{ width: `${(data.revenue / maxBrandRevenue) * 100}%`, height: "100%", background: COLORS[i % COLORS.length], borderRadius: 3 }} />
-                              </div>
+                              <div style={{ width: 55, fontSize: 12, fontWeight: 600, color: COLORS[i % COLORS.length], textAlign: "right" }}>${c.avgPrice}</div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
+                  </div>
 
+                  {/* Price Distribution + Category Table */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 36 }}>
                     {/* Price Distribution */}
                     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
                       <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Price Distribution</h3>
@@ -566,95 +626,35 @@ function SuppleMint() {
                         ))}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Category Price Range Table */}
-                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24, marginBottom: 36 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Category Price Range Analysis</h3>
-                    <div style={{ overflowX: "auto" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                        <thead>
-                          <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-                            {["Category", "Products", "Avg Price", "Min", "Max", "Range", "Avg Rank"].map(h => (
-                              <th key={h} style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 1 }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {catEntries.map(([catId, c], i) => {
-                            const cat = CATEGORIES.find(ct => ct.id === catId);
-                            return (
-                              <tr key={catId} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
-                                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
-                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                                <td style={{ padding: "10px 12px", color: "#e2e8f0", fontWeight: 600 }}>{cat?.icon} {cat?.name || catId}</td>
-                                <td style={{ padding: "10px 12px", color: "#94a3b8" }}>{c.totalProducts.toLocaleString()}</td>
-                                <td style={{ padding: "10px 12px", color: COLORS[i % COLORS.length], fontWeight: 600 }}>${c.avgPrice}</td>
-                                <td style={{ padding: "10px 12px", color: "#6ee7b7" }}>${c.minPrice.toFixed(2)}</td>
-                                <td style={{ padding: "10px 12px", color: "#f472b6" }}>${c.maxPrice.toFixed(2)}</td>
-                                <td style={{ padding: "10px 12px", color: "#fbbf24" }}>${(c.maxPrice - c.minPrice).toFixed(2)}</td>
-                                <td style={{ padding: "10px 12px", color: "#818cf8" }}>#{c.avgRank.toLocaleString()}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Top 100 Products */}
-                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Top 100 Products by Sales Rank</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {topAll.map((p, i) => {
-                        const cat = CATEGORIES.find(ct => ct.id === p.category);
-                        return (
-                          <div key={p.asin} onClick={() => setSelectedProduct({
-                            asin: p.asin,
-                            summaries: [{ itemName: p.title }],
-                            attributes: {
-                              brand: [{ value: p.brand }],
-                              ...(p.price ? { list_price: [{ value: p.price }] } : {}),
-                            },
-                            salesRanks: p.rank ? [{ ranks: [{ rank: p.rank }] }] : [],
-                            images: p.image ? [{ images: [{ link: p.image }] }] : [],
-                          })} style={{
-                            display: "flex", alignItems: "center", gap: 14, padding: "12px 16px",
-                            background: i < 3 ? `rgba(${i === 0 ? "251,191,36" : i === 1 ? "192,192,192" : "205,127,50"},0.06)` : "transparent",
-                            border: "1px solid rgba(255,255,255,0.05)", borderRadius: 10,
-                            cursor: "pointer", transition: "all 0.2s",
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = i < 3 ? `rgba(${i === 0 ? "251,191,36" : i === 1 ? "192,192,192" : "205,127,50"},0.12)` : "rgba(255,255,255,0.05)"}
-                          onMouseLeave={e => e.currentTarget.style.background = i < 3 ? `rgba(${i === 0 ? "251,191,36" : i === 1 ? "192,192,192" : "205,127,50"},0.06)` : "transparent"}>
-                            <div style={{
-                              width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
-                              fontSize: 13, fontWeight: 700, flexShrink: 0,
-                              background: i === 0 ? "rgba(251,191,36,0.2)" : i === 1 ? "rgba(192,192,192,0.2)" : i === 2 ? "rgba(205,127,50,0.2)" : "rgba(255,255,255,0.05)",
-                              color: i === 0 ? "#fbbf24" : i === 1 ? "#c0c0c0" : i === 2 ? "#cd7f32" : "#64748b"
-                            }}>{i + 1}</div>
-                            {p.image && (
-                              <div style={{ width: 52, height: 52, borderRadius: 8, overflow: "hidden", background: "#1e293b", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <img src={p.image} alt={p.title} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                              </div>
-                            )}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 13, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
-                              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{p.brand} &middot; {cat?.icon} {cat?.name}</div>
-                            </div>
-                            <div style={{ textAlign: "right", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
-                              <div>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: "#6ee7b7" }}>#{p.rank.toLocaleString()}</div>
-                                {p.price && <div style={{ fontSize: 11, color: "#94a3b8" }}>${p.price.toFixed(2)}</div>}
-                              </div>
-                              <a href={`https://www.amazon.com/dp/${p.asin}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
-                                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 8, background: "rgba(255,153,0,0.15)", color: "#ff9900", textDecoration: "none", fontSize: 14, flexShrink: 0 }}
-                                title="View on Amazon">
-                                {"\u2197"}
-                              </a>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    {/* Category Price Range Table */}
+                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Category Price Range</h3>
+                      <div style={{ overflowX: "auto", maxHeight: 300, overflowY: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                              {["Category", "Avg", "Min", "Max", "Rank"].map(h => (
+                                <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#64748b", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 1, position: "sticky", top: 0, background: "#0f172a" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {catEntries.map(([catId, c], i) => {
+                              const cat = CATEGORIES.find(ct => ct.id === catId);
+                              return (
+                                <tr key={catId} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                                  <td style={{ padding: "8px 10px", color: "#e2e8f0", fontWeight: 600, fontSize: 12 }}>{cat?.icon} {cat?.name || catId}</td>
+                                  <td style={{ padding: "8px 10px", color: COLORS[i % COLORS.length], fontWeight: 600 }}>${c.avgPrice}</td>
+                                  <td style={{ padding: "8px 10px", color: "#6ee7b7" }}>${c.minPrice.toFixed(2)}</td>
+                                  <td style={{ padding: "8px 10px", color: "#f472b6" }}>${c.maxPrice.toFixed(2)}</td>
+                                  <td style={{ padding: "8px 10px", color: "#818cf8" }}>#{c.avgRank.toLocaleString()}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </div>
