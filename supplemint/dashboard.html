@@ -681,7 +681,7 @@ function SuppleMint() {
             {/* Keyword Filter removed - now integrated into Top 100 category filter */}
 
             {trendsLoading && !trends ? <CategoryLoadingSpinner />
-            ) : trends ? (() => {
+            : trends ? (() => {
               const cats = trends.categories || {};
               let catEntries = Object.entries(cats);
               // Apply keyword filter
