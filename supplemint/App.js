@@ -11,6 +11,18 @@ const CATEGORIES = [
   { id: "magnesium", name: "Magnesium", icon: "⚡" },
   { id: "vitaminD", name: "Vitamin D", icon: "☀️" },
   { id: "vitaminC", name: "Vitamin C", icon: "🍋" },
+  { id: "zinc", name: "Zinc", icon: "🛡️" },
+  { id: "iron", name: "Iron", icon: "🩸" },
+  { id: "calcium", name: "Calcium", icon: "🦴" },
+  { id: "biotin", name: "Biotin", icon: "💇" },
+  { id: "melatonin", name: "Melatonin", icon: "🌙" },
+  { id: "ashwagandha", name: "Ashwagandha", icon: "🌿" },
+  { id: "creatine", name: "Creatine", icon: "🏋️" },
+  { id: "turmeric", name: "Turmeric", icon: "🟡" },
+  { id: "elderberry", name: "Elderberry", icon: "🫐" },
+  { id: "fiber", name: "Fiber", icon: "🌾" },
+  { id: "multivitamin", name: "Multivitamin", icon: "💎" },
+  { id: "bcaa", name: "BCAA", icon: "🔥" },
 ];
 
 const formatPrice = (attrs) => {
@@ -282,13 +294,17 @@ export default function SuppleMint() {
               const allBrands = new Set();
               catEntries.forEach(([, c]) => Object.keys(c.brands).forEach(b => allBrands.add(b)));
               const overallAvgPrice = catEntries.length ? +(catEntries.reduce((sum, [, c]) => sum + c.avgPrice, 0) / catEntries.length).toFixed(2) : 0;
-              const topAll = catEntries.flatMap(([catId, c]) => c.topProducts.map(p => ({ ...p, category: catId }))).sort((a, b) => a.rank - b.rank).slice(0, 10);
+              const topAll = catEntries.flatMap(([catId, c]) => c.topProducts.map(p => ({ ...p, category: catId }))).sort((a, b) => a.rank - b.rank).slice(0, 100);
               const maxAvgPrice = Math.max(...catEntries.map(([, c]) => c.avgPrice), 1);
               const maxProducts = Math.max(...catEntries.map(([, c]) => c.totalProducts), 1);
-              const brandCounts = {};
-              catEntries.forEach(([, c]) => Object.entries(c.brands).forEach(([b, cnt]) => { brandCounts[b] = (brandCounts[b] || 0) + cnt; }));
-              const topBrands = Object.entries(brandCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
-              const maxBrandCount = topBrands.length ? topBrands[0][1] : 1;
+              const brandRevenues = {};
+              catEntries.forEach(([, c]) => Object.entries(c.brands).forEach(([b, data]) => {
+                if (!brandRevenues[b]) brandRevenues[b] = { count: 0, revenue: 0 };
+                brandRevenues[b].count += data.count;
+                brandRevenues[b].revenue += data.revenue;
+              }));
+              const topBrands = Object.entries(brandRevenues).sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 10);
+              const maxBrandRevenue = topBrands.length ? topBrands[0][1].revenue : 1;
               const totalDist = { under10: 0, '10to20': 0, '20to30': 0, '30to50': 0, over50: 0 };
               catEntries.forEach(([, c]) => { Object.entries(c.priceDistribution).forEach(([k, v]) => { totalDist[k] += v; }); });
               const maxDist = Math.max(...Object.values(totalDist), 1);
@@ -358,18 +374,18 @@ export default function SuppleMint() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 36 }}>
                     {/* Brand Market Share */}
                     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Top Brands (by product count)</h3>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Top Brands (by estimated revenue)</h3>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {topBrands.map(([brand, count], i) => (
+                        {topBrands.map(([brand, data], i) => (
                           <div key={brand} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <div style={{ width: 18, fontSize: 11, color: "#475569", textAlign: "right", flexShrink: 0 }}>{i + 1}</div>
                             <div style={{ flex: 1 }}>
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                                 <span style={{ fontSize: 12, color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{brand}</span>
-                                <span style={{ fontSize: 11, color: "#64748b" }}>{count} products</span>
+                                <span style={{ fontSize: 11, color: "#64748b" }}>${data.revenue.toFixed(0)} · {data.count} products</span>
                               </div>
                               <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: 3, height: 6, overflow: "hidden" }}>
-                                <div style={{ width: `${(count / maxBrandCount) * 100}%`, height: "100%", background: COLORS[i % COLORS.length], borderRadius: 3 }} />
+                                <div style={{ width: `${(data.revenue / maxBrandRevenue) * 100}%`, height: "100%", background: COLORS[i % COLORS.length], borderRadius: 3 }} />
                               </div>
                             </div>
                           </div>
@@ -436,7 +452,7 @@ export default function SuppleMint() {
 
                   {/* Top 10 Products */}
                   <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 24 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Top 10 Products by Sales Rank</h3>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 20 }}>Top 100 Products by Sales Rank</h3>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {topAll.map((p, i) => {
                         const cat = CATEGORIES.find(ct => ct.id === p.category);

@@ -98,26 +98,27 @@ app.get('/api/product/:asin', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+const CATEGORY_KEYWORDS = {
+  vitamins: 'vitamins supplements', protein: 'protein powder',
+  omega: 'omega fish oil', probiotics: 'probiotics',
+  collagen: 'collagen supplements', magnesium: 'magnesium supplement',
+  vitaminD: 'vitamin d3', vitaminC: 'vitamin c supplement',
+  zinc: 'zinc supplement', iron: 'iron supplement',
+  calcium: 'calcium supplement', biotin: 'biotin supplement',
+  melatonin: 'melatonin supplement', ashwagandha: 'ashwagandha supplement',
+  creatine: 'creatine supplement', turmeric: 'turmeric curcumin supplement',
+  elderberry: 'elderberry supplement', fiber: 'fiber supplement',
+  multivitamin: 'multivitamin supplement', bcaa: 'bcaa supplement'
+};
+
 app.get('/api/categories', (req, res) => {
-  res.json([
-    { id: 'vitamins', name: 'Vitamins & Supplements', keyword: 'vitamins supplements' },
-    { id: 'protein', name: 'Protein & Fitness', keyword: 'protein powder' },
-    { id: 'omega', name: 'Omega & Fish Oil', keyword: 'omega fish oil' },
-    { id: 'probiotics', name: 'Probiotics', keyword: 'probiotics' },
-    { id: 'collagen', name: 'Collagen', keyword: 'collagen supplements' },
-    { id: 'magnesium', name: 'Magnesium', keyword: 'magnesium supplement' },
-    { id: 'vitaminD', name: 'Vitamin D', keyword: 'vitamin d3' },
-    { id: 'vitaminC', name: 'Vitamin C', keyword: 'vitamin c supplement' }
-  ]);
+  res.json(Object.entries(CATEGORY_KEYWORDS).map(([id, keyword]) => ({
+    id, keyword, name: id.charAt(0).toUpperCase() + id.slice(1)
+  })));
 });
 
 app.get('/api/trends', async (req, res) => {
-  const categories = {
-    vitamins: 'vitamins supplements', protein: 'protein powder',
-    omega: 'omega fish oil', probiotics: 'probiotics',
-    collagen: 'collagen supplements', magnesium: 'magnesium supplement',
-    vitaminD: 'vitamin d3', vitaminC: 'vitamin c supplement'
-  };
+  const categories = CATEGORY_KEYWORDS;
   try {
     const results = {};
     const entries = Object.entries(categories);
@@ -140,7 +141,11 @@ app.get('/api/trends', async (req, res) => {
         const brands = {};
         items.forEach(p => {
           const brand = p.attributes?.brand?.[0]?.value || 'Unknown';
-          brands[brand] = (brands[brand] || 0) + 1;
+          const pr = p.attributes?.list_price?.[0]?.value?.amount || p.attributes?.price?.[0]?.value;
+          const priceVal = pr ? parseFloat(pr) : 0;
+          if (!brands[brand]) brands[brand] = { count: 0, revenue: 0 };
+          brands[brand].count += 1;
+          brands[brand].revenue += priceVal;
         });
         results[id] = {
           totalProducts: data.numberOfResults || items.length,
@@ -161,7 +166,7 @@ app.get('/api/trends', async (req, res) => {
             }))
             .filter(p => p.rank)
             .sort((a, b) => a.rank - b.rank)
-            .slice(0, 5),
+            .slice(0, 100),
           priceDistribution: {
             under10: prices.filter(p => p < 10).length,
             '10to20': prices.filter(p => p >= 10 && p < 20).length,
@@ -177,13 +182,7 @@ app.get('/api/trends', async (req, res) => {
 });
 
 app.get('/api/products/:categoryId', async (req, res) => {
-  const keywords = {
-    vitamins: 'vitamins supplements', protein: 'protein powder',
-    omega: 'omega fish oil', probiotics: 'probiotics',
-    collagen: 'collagen supplements', magnesium: 'magnesium supplement',
-    vitaminD: 'vitamin d3', vitaminC: 'vitamin c supplement'
-  };
-  const keyword = keywords[req.params.categoryId] || req.params.categoryId;
+  const keyword = CATEGORY_KEYWORDS[req.params.categoryId] || req.params.categoryId;
   try {
     const result = await spApiGet(`/catalog/2022-04-01/items?keywords=${encodeURIComponent(keyword)}&marketplaceIds=${MARKETPLACE_ID}&includedData=summaries,attributes,salesRanks,images`);
     res.json(result.data);
