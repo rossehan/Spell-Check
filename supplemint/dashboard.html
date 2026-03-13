@@ -167,8 +167,13 @@ function SuppleMint() {
     try {
       const r = await fetch(`${API_BASE}/api/trends`);
       const data = await r.json();
-      setTrends(data);
-      setIsLive(true);
+      if (data.categories && Object.keys(data.categories).length > 0) {
+        setTrends(data);
+        setIsLive(true);
+      } else {
+        setTrends(generateDemoData());
+        setApiStatus({ status: "ok", mode: "demo" });
+      }
     } catch (e) {
       setTrends(generateDemoData());
       setApiStatus({ status: "ok", mode: "demo" });
