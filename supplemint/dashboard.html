@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SuppleMint - Trend Analysis Dashboard</title>
+<title>VitaView - Trend Analysis Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -272,36 +272,22 @@ const TREND_HASHTAGS = [
 
 function CategoryLoadingSpinner() {
   const [idx, setIdx] = useState(0);
+  const [fade, setFade] = useState(true);
   useEffect(() => {
-    const t = setInterval(() => setIdx(i => (i + 1) % CATEGORIES.length), 600);
+    const t = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setIdx(i => (i + 1) % CATEGORIES.length);
+        setFade(true);
+      }, 200);
+    }, 800);
     return () => clearInterval(t);
   }, []);
-  const ICON_SIZE = 56;
-  const centerOffset = 3 * ICON_SIZE;
+  const cat = CATEGORIES[idx];
   return (
     <div style={{ textAlign: "center", padding: 60 }}>
-      <div style={{ overflow: "hidden", marginBottom: 20, position: "relative", height: 80, maxWidth: 500, margin: "0 auto 20px" }}>
-        <div style={{
-          display: "flex", alignItems: "center",
-          transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-          transform: `translateX(${-idx * ICON_SIZE + centerOffset}px)`,
-          width: "max-content",
-        }}>
-          {CATEGORIES.map((cat, i) => {
-            const dist = Math.abs(i - idx);
-            return (
-              <div key={cat.id} style={{
-                fontSize: dist === 0 ? 48 : dist === 1 ? 32 : 24,
-                opacity: dist === 0 ? 1 : dist === 1 ? 0.6 : dist === 2 ? 0.3 : 0.15,
-                transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-                width: ICON_SIZE, textAlign: "center", flexShrink: 0,
-                transform: dist === 0 ? "scale(1.1)" : "scale(1)",
-              }}>{cat.icon}</div>
-            );
-          })}
-        </div>
-      </div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 12, minHeight: 24 }}>{CATEGORIES[idx]?.name}</div>
+      <div style={{ fontSize: 64, marginBottom: 12, transition: "opacity 0.2s ease, transform 0.3s ease", opacity: fade ? 1 : 0, transform: fade ? "scale(1) translateY(0)" : "scale(0.7) translateY(10px)" }}>{cat?.icon}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 16, minHeight: 24, transition: "opacity 0.2s ease", opacity: fade ? 1 : 0 }}>{cat?.name}</div>
       <div style={{ width: 36, height: 36, border: "3px solid rgba(16,185,129,0.2)", borderTopColor: "#10b981", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
       <div style={{ color: "#64748b", fontSize: 14 }}>Analyzing all categories from Amazon SP-API...</div>
       <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 6 }}>{idx + 1} / {CATEGORIES.length} categories</div>
@@ -312,7 +298,7 @@ function CategoryLoadingSpinner() {
   );
 }
 
-function SuppleMint() {
+function VitaView() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [activeCategory, setActiveCategory] = useState("vitamins");
   const [products, setProducts] = useState([]);
@@ -385,10 +371,10 @@ function SuppleMint() {
     }
   }, [top100CatFilters]);
 
-  const loadTrends = async () => {
+  const loadTrends = async (forceRefresh = false) => {
     setTrendsLoading(true);
     try {
-      const r = await fetch(`${API_BASE}/api/trends`);
+      const r = await fetch(`${API_BASE}/api/trends${forceRefresh ? '?refresh=true' : ''}`);
       const data = await r.json();
       if (data.categories && Object.keys(data.categories).length > 0) {
         setTrends(data);
@@ -643,12 +629,12 @@ function SuppleMint() {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 36, height: 36, background: "linear-gradient(135deg, #10b981, #3b82f6)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{"\u{1F33F}"}</div>
           <div>
-            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700, color: "#0f172a", letterSpacing: -0.5 }}>SuppleMint</div>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700, color: "#0f172a", letterSpacing: -0.5 }}>VitaView</div>
             <div style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase" }}>Amazon Market Intelligence</div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => { setTrends(null); setTimeout(loadTrends, 100); }} disabled={trendsLoading} style={{
+          <button onClick={() => { setTrends(null); setTimeout(() => loadTrends(true), 100); }} disabled={trendsLoading} style={{
             background: "linear-gradient(135deg, #10b981, #3b82f6)", border: "none", borderRadius: 8,
             padding: "7px 14px", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 12,
             opacity: trendsLoading ? 0.5 : 1
@@ -1363,7 +1349,7 @@ function SuppleMint() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<SuppleMint />);
+ReactDOM.createRoot(document.getElementById('root')).render(<VitaView />);
 </script>
 </body>
 </html>

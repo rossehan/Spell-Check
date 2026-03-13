@@ -116,6 +116,11 @@ async function spApiGet(path) {
   });
 }
 
+// In-memory cache for trends data (5 min TTL)
+let trendsCache = null;
+let trendsCacheTime = 0;
+const TRENDS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 app.get('/api/health', async (req, res) => {
   let spConnected = false;
   try { await getAccessToken(); spConnected = true; } catch(e) {}
@@ -216,11 +221,16 @@ async function fetchInBatches(entries, batchSize = 10, delayMs = 1500) {
 }
 
 app.get('/api/trends', async (req, res) => {
+  // Return cached data if fresh (skip with ?refresh=true)
+  if (trendsCache && Date.now() - trendsCacheTime < TRENDS_CACHE_TTL && req.query.refresh !== 'true') {
+    console.log('📦 Returning cached trends data');
+    return res.json(trendsCache);
+  }
   const categories = CATEGORY_KEYWORDS;
   try {
     const results = {};
     const entries = Object.entries(categories);
-    const fetches = await fetchInBatches(entries, 10, 1500);
+    const fetches = await fetchInBatches(entries, 15, 800);
     for (const result of fetches) {
       if (result.status === 'fulfilled') {
         const { id, data } = result.value;
@@ -289,7 +299,11 @@ app.get('/api/trends', async (req, res) => {
         };
       }
     }
-    res.json({ categories: results, timestamp: new Date().toISOString() });
+    const responseData = { categories: results, timestamp: new Date().toISOString() };
+    trendsCache = responseData;
+    trendsCacheTime = Date.now();
+    console.log('✅ Trends data cached');
+    res.json(responseData);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -321,7 +335,7 @@ app.get('/api/debug', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 SuppleMint Backend running on http://localhost:${PORT}`);
+  console.log(`🚀 VitaView Backend running on http://localhost:${PORT}`);
   console.log(`📋 Mode: LIVE (SP-API direct HTTP)`);
   getAccessToken()
     .then(() => console.log('✅ SP-API connected!'))
