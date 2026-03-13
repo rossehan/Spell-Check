@@ -1156,7 +1156,7 @@ function VitaView() {
                           ))}
                         </tr></thead>
                         <tbody>
-                          {[...catEntries].sort((a, b) => (a[1].hhi || 0) - (b[1].hhi || 0)).map(([catId, c]) => {
+                          {[...catEntries].filter(([, c]) => c.brandCount > 0 || Object.keys(c.brands || {}).length > 0).sort((a, b) => (a[1].hhi || 0) - (b[1].hhi || 0)).map(([catId, c]) => {
                             const cat = CATEGORIES.find(ct => ct.id === catId);
                             const hhiVal = c.hhi || 0;
                             const hhiColor = hhiVal < 1500 ? "#10b981" : hhiVal < 2500 ? "#f59e0b" : "#ef4444";
