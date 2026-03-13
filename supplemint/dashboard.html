@@ -156,6 +156,18 @@ function SuppleMint() {
   }, []);
 
   const [isLive, setIsLive] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  // Auto-refresh every 30 minutes
+  useEffect(() => {
+    const REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes
+    const interval = setInterval(() => {
+      console.log("Auto-refresh: fetching latest data...");
+      loadTrends();
+      if (activeTab === "browse") loadCategory(activeCategory);
+    }, REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [activeTab, activeCategory]);
 
   useEffect(() => {
     if (activeTab === "dashboard" && !trends) loadTrends();
@@ -178,6 +190,7 @@ function SuppleMint() {
       setTrends(generateDemoData());
       setApiStatus({ status: "ok", mode: "demo" });
     }
+    setLastUpdated(new Date());
     setTrendsLoading(false);
   };
 
@@ -353,8 +366,26 @@ function SuppleMint() {
         animation: "pulse 2s infinite"
       }} />
       {apiStatus?.mode === "live" ? "LIVE" : apiStatus?.mode?.toUpperCase() || "CONNECTING..."}
+      {lastUpdated && (
+        <span style={{ fontSize: 10, opacity: 0.7, marginLeft: 4 }}>
+          {lastUpdated.toLocaleTimeString()}
+        </span>
+      )}
     </div>
   );
+
+  // Countdown to next refresh
+  const [nextRefreshIn, setNextRefreshIn] = useState(30 * 60);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNextRefreshIn(prev => {
+        if (prev <= 1) return 30 * 60;
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+  useEffect(() => { setNextRefreshIn(30 * 60); }, [lastUpdated]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#020817", color: "#e2e8f0", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
@@ -436,6 +467,7 @@ function SuppleMint() {
                       { label: "Avg Price", value: `$${overallAvgPrice}`, color: "#fbbf24", icon: "\u{1F4B0}" },
                       { label: "Categories", value: catEntries.length, color: "#f472b6", icon: "\u{1F4CA}" },
                       { label: "Data Source", value: apiStatus?.mode === "live" ? "LIVE" : "DEMO", color: "#38bdf8", icon: "\u26A1" },
+                      { label: "Next Refresh", value: `${Math.floor(nextRefreshIn / 60)}:${String(nextRefreshIn % 60).padStart(2, '0')}`, color: "#a78bfa", icon: "\u{1F504}" },
                     ].map((s, i) => (
                       <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 20 }}>
                         <div style={{ fontSize: 22, marginBottom: 8 }}>{s.icon}</div>
