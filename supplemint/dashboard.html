@@ -647,20 +647,153 @@ function SuppleMint() {
               const maxDist = Math.max(...Object.values(totalDist), 1);
               const COLORS = ["#10b981", "#6366f1", "#f59e0b", "#ec4899", "#0ea5e9", "#f97316", "#8b5cf6", "#14b8a6"];
 
+              // --- NPD Insights computations ---
+              const maxRev = Math.max(...catEntries.map(([,c]) => c.estimatedMonthlyRevenue || 0), 1);
+              const maxSpread = Math.max(...catEntries.map(([,c]) => c.priceSpread || 0), 1);
+              const scoredCats = catEntries.map(([catId, c]) => {
+                const demandScore = c.avgRank > 0 ? Math.max(0, 100 - Math.log10(c.avgRank) * 20) : 0;
+                const compScore = c.hhi ? Math.max(0, 100 - (c.hhi / 100)) : 50;
+                const priceScore = maxSpread > 0 ? ((c.priceSpread || 0) / maxSpread) * 100 : 0;
+                const revenueScore = maxRev > 0 ? ((c.estimatedMonthlyRevenue || 0) / maxRev) * 100 : 0;
+                const opportunity = Math.round(demandScore * 0.3 + compScore * 0.25 + priceScore * 0.2 + revenueScore * 0.25);
+                return { catId, c, opportunity };
+              });
+              const npdCategories = [...scoredCats].sort((a, b) => b.opportunity - a.opportunity).slice(0, 3);
+              const hotCategories = [...catEntries].sort((a, b) => (b[1].avgDailySales || 0) - (a[1].avgDailySales || 0)).slice(0, 3);
+
+              // Product card helper for recommendation sections
+              const MiniProductCard = ({ p, badge, badgeColor }) => {
+                const cat = CATEGORIES.find(ct => ct.id === p.category);
+                const est = estimateDailySales(p.rank);
+                return (
+                  <div onClick={() => setSelectedProduct({
+                    asin: p.asin, summaries: [{ itemName: p.title }],
+                    attributes: { brand: [{ value: p.brand }], ...(p.price ? { list_price: [{ value: p.price }] } : {}) },
+                    salesRanks: p.rank ? [{ ranks: [{ rank: p.rank }] }] : [],
+                    images: p.image ? [{ images: [{ link: p.image }] }] : [],
+                  })} style={{ display: "flex", gap: 12, padding: 12, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, cursor: "pointer", transition: "all 0.2s", minWidth: 0 }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)"}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
+                    {p.image ? (
+                      <div style={{ width: 56, height: 56, borderRadius: 8, overflow: "hidden", background: "#f8fafc", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <img src={p.image} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                      </div>
+                    ) : (
+                      <div style={{ width: 56, height: 56, borderRadius: 8, background: "#f1f5f9", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{cat?.icon || "\u{1F4E6}"}</div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, color: "#0f172a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
+                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{p.brand}</div>
+                      <div style={{ display: "flex", gap: 8, marginTop: 4, alignItems: "center" }}>
+                        {p.price && <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>${p.price.toFixed(2)}</span>}
+                        <span style={{ fontSize: 11, color: "#10b981", fontWeight: 600 }}>#{p.rank?.toLocaleString()}</span>
+                        {est && <span style={{ fontSize: 10, color: "#2563eb", background: "#eff6ff", padding: "1px 6px", borderRadius: 8 }}>~{est}/day</span>}
+                        {badge && <span style={{ fontSize: 10, color: badgeColor || "#6366f1", background: `${badgeColor || "#6366f1"}15`, padding: "1px 6px", borderRadius: 8, fontWeight: 600 }}>{badge}</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              };
+
               return (
                 <div>
-                  {/* Summary Cards */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 36 }}>
+                  {/* NPD Insight Cards - Section Recommendations */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginBottom: 36 }}>
+                    {/* Best Sellers Top 3 */}
+                    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                        <span style={{ background: "#fef3c7", borderRadius: 8, padding: "4px 8px", fontSize: 16 }}>{"\u{1F3C6}"}</span>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Best Sellers</div>
+                          <div style={{ fontSize: 11, color: "#64748b" }}>Top 3 by sales rank</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {topAll.slice(0, 3).map((p, i) => (
+                          <MiniProductCard key={p.asin} p={p} badge={["1st", "2nd", "3rd"][i]} badgeColor={["#d97706", "#64748b", "#c2410c"][i]} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* NPD Opportunity - Best categories to enter */}
+                    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                        <span style={{ background: "#ecfdf5", borderRadius: 8, padding: "4px 8px", fontSize: 16 }}>{"\u{1F4A1}"}</span>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>NPD Opportunity</div>
+                          <div style={{ fontSize: 11, color: "#64748b" }}>Low competition + high demand</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {npdCategories.map(({ catId, c, opportunity }, i) => {
+                          const cat = CATEGORIES.find(ct => ct.id === catId);
+                          const topProd = (c.topProducts || [])[0];
+                          const hhiLabel = (c.hhi || 0) < 1500 ? "Low" : (c.hhi || 0) < 2500 ? "Mid" : "High";
+                          return (
+                            <div key={catId} style={{ display: "flex", gap: 12, padding: 12, background: i === 0 ? "#f0fdf4" : "#fff", border: "1px solid #e2e8f0", borderRadius: 12 }}>
+                              <div style={{ width: 56, height: 56, borderRadius: 8, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0 }}>{cat?.icon}</div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{cat?.name || catId}</div>
+                                <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Avg ${c.avgPrice} &middot; {c.brandCount || Object.keys(c.brands).length} brands &middot; HHI {hhiLabel}</div>
+                                <div style={{ display: "flex", gap: 8, marginTop: 4, alignItems: "center" }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#10b981", background: "#ecfdf5", padding: "1px 8px", borderRadius: 8, border: "1px solid #a7f3d0" }}>Score {opportunity}</span>
+                                  <span style={{ fontSize: 10, color: "#2563eb" }}>~{c.avgDailySales || 0} sales/day</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Hot Categories - Highest daily sales */}
+                    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                        <span style={{ background: "#fef2f2", borderRadius: 8, padding: "4px 8px", fontSize: 16 }}>{"\u{1F525}"}</span>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Hot Right Now</div>
+                          <div style={{ fontSize: 11, color: "#64748b" }}>Highest avg daily sales</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {hotCategories.map(([catId, c], i) => {
+                          const cat = CATEGORIES.find(ct => ct.id === catId);
+                          const topProd = (c.topProducts || [])[0];
+                          return (
+                            <div key={catId} style={{ display: "flex", gap: 12, padding: 12, background: i === 0 ? "#fff7ed" : "#fff", border: "1px solid #e2e8f0", borderRadius: 12 }}>
+                              {topProd?.image ? (
+                                <div style={{ width: 56, height: 56, borderRadius: 8, overflow: "hidden", background: "#f8fafc", flexShrink: 0 }}>
+                                  <img src={topProd.image} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                                </div>
+                              ) : (
+                                <div style={{ width: 56, height: 56, borderRadius: 8, background: "#fff7ed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0 }}>{cat?.icon}</div>
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{cat?.name || catId}</div>
+                                <div style={{ fontSize: 11, color: "#64748b", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{topProd ? `#1: ${topProd.title}` : "No products"}</div>
+                                <div style={{ display: "flex", gap: 8, marginTop: 4, alignItems: "center" }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#ea580c", background: "#fff7ed", padding: "1px 8px", borderRadius: 8, border: "1px solid #fed7aa" }}>~{c.avgDailySales || 0}/day</span>
+                                  <span style={{ fontSize: 10, color: "#10b981" }}>${(c.estimatedMonthlyRevenue || 0).toLocaleString()}/mo</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Market Stats Bar */}
+                  <div style={{ display: "flex", gap: 16, marginBottom: 36, flexWrap: "wrap" }}>
                     {[
-                      { label: "Total Products", value: totalProducts.toLocaleString(), color: "#10b981", icon: "\u{1F4E6}" },
-                      { label: "Unique Brands", value: allBrands.size.toLocaleString(), color: "#6366f1", icon: "\u{1F3F7}\uFE0F" },
-                      { label: "Avg Price", value: `$${overallAvgPrice}`, color: "#f59e0b", icon: "\u{1F4B0}" },
-                      { label: "Categories", value: catEntries.length, color: "#ec4899", icon: "\u{1F4CA}" },
+                      { label: "Total Products", value: totalProducts.toLocaleString(), color: "#10b981" },
+                      { label: "Brands", value: allBrands.size.toLocaleString(), color: "#6366f1" },
+                      { label: "Avg Price", value: `$${overallAvgPrice}`, color: "#f59e0b" },
+                      { label: "Categories", value: catEntries.length, color: "#ec4899" },
                     ].map((s, i) => (
-                      <div key={i} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                        <div style={{ fontSize: 22, marginBottom: 8 }}>{s.icon}</div>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{s.value}</div>
-                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{s.label}</div>
+                      <div key={i} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: s.color }}>{s.value}</span>
+                        <span style={{ fontSize: 11, color: "#94a3b8" }}>{s.label}</span>
                       </div>
                     ))}
                   </div>
