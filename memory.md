@@ -13,10 +13,10 @@
 - Browser: Ctrl+Shift+R for hard refresh after file updates
 
 ## File Structure (in repo)
-- `/supplemint/server.js` - Express backend, SP-API integration
-- `/supplemint/dashboard.html` - Single-page React app (Babel standalone)
-- `/supplemint/package.json` - Dependencies (express, cors, dotenv)
-- `/supplemint/.env` - SP-API credentials (gitignored)
+- `/vitaview/server.js` - Express backend, SP-API integration
+- `/vitaview/dashboard.html` - Single-page React app (Babel standalone)
+- `/vitaview/package.json` - Dependencies (express, cors, dotenv)
+- `/vitaview/.env` - SP-API credentials (gitignored)
 
 ## Completed Features
 1. Dashboard with 2 tabs: Dashboard, Browse & Search (merged)
@@ -90,8 +90,8 @@ vitamins, protein, omega, probiotics, collagen, magnesium, vitaminD, vitaminC, z
 ```powershell
 cd C:\Users\admin\Desktop\supplemint-backend
 # Ctrl+C to stop server first
-iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/claude/setup-supplemint-5e6W6/supplemint/server.js" -OutFile server.js
-iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/claude/setup-supplemint-5e6W6/supplemint/dashboard.html" -OutFile dashboard.html
+iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/claude/setup-supplemint-5e6W6/vitaview/server.js" -OutFile server.js
+iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/claude/setup-supplemint-5e6W6/vitaview/dashboard.html" -OutFile dashboard.html
 node server.js
 ```
 Then Ctrl+Shift+R in browser.

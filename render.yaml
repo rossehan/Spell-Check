@@ -2,7 +2,7 @@ services:
   - type: web
     name: vitaview
     runtime: node
-    rootDir: supplemint
+    rootDir: vitaview
     buildCommand: npm install
     startCommand: node server.js
     envVars:

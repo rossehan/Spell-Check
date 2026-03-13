@@ -1,6 +1,6 @@
 # CLAUDE.md - Instructions for Claude Code
 
-## Project: SuppleMint
+## Project: VitaView
 Amazon supplement market intelligence dashboard using SP-API.
 
 ## IMPORTANT: Always Read memory.md First
@@ -20,7 +20,7 @@ Before starting any work, read `/memory.md` for:
 7. **Git branch**: `claude/setup-supplemint-5e6W6`
 
 ## File Locations
-- Backend: `/supplemint/server.js`
-- Frontend: `/supplemint/dashboard.html`
+- Backend: `/vitaview/server.js`
+- Frontend: `/vitaview/dashboard.html`
 - Memory: `/memory.md`
 - User's local: `C:\Users\admin\Desktop\supplemint-backend`
