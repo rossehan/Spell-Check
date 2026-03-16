@@ -19,8 +19,17 @@
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#64748b">Loading VitaView...</div></div>
+<script>
+// Global error catcher - shows errors on screen for debugging
+window.onerror = function(msg, url, line, col, error) {
+  document.getElementById('root').innerHTML = '<div style="padding:40px;font-family:monospace;color:#dc2626"><h2>JS Error</h2><p>' + msg + '</p><p>Line: ' + line + ', Col: ' + col + '</p><pre>' + (error?.stack || '') + '</pre></div>';
+};
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('Unhandled:', e.reason);
+});
+</script>
+<script type="text/babel" data-type="module">
 const { useState, useEffect } = React;
 
 const API_BASE = window.location.hostname === "localhost" ? "http://localhost:3001" : "";
@@ -2035,6 +2044,16 @@ function VitaView() {
                     {keywordIntel && trends && (() => {
                       const cats = trends.categories || {};
                       const catEntries = Object.entries(cats);
+                      // Normalize avgDailySales across all categories for fair comparison
+                      const allSales = catEntries.map(([,c]) => c.avgDailySales || 0);
+                      const maxSales = Math.max(...allSales, 1);
+                      const minSales = Math.min(...allSales);
+                      const salesRange = maxSales - minSales || 1;
+                      const maxTrendingKW = Math.max(...catEntries.map(([catId]) => {
+                        const kw = keywordIntel.categoryKeywords[catId] || [];
+                        return kw.filter(k => keywordIntel.trendingIngredients.some(t => t.keyword === k.keyword)).length;
+                      }), 1);
+
                       const trendMomentum = catEntries.map(([catId, c]) => {
                         const cat = CATEGORIES.find(ct => ct.id === catId);
                         const catKW = keywordIntel.categoryKeywords[catId] || [];
@@ -2044,42 +2063,60 @@ function VitaView() {
                         const googleMatch = googleTrends ? googleTrends.trendingKeywords.filter(gk =>
                           catKW.some(ck => ck.keyword === gk.keyword) || catId.toLowerCase().includes(gk.keyword)
                         ).length : 0;
-                        const momentum = Math.min(100, Math.round(trendingCount * 15 + googleMatch * 25 + (c.avgDailySales || 0) / 2));
-                        return { catId, cat, c, trendingCount, googleMatch, momentum };
+                        // Normalized scoring: keyword trend (40%) + google match (30%) + relative demand (30%)
+                        const kwScore = maxTrendingKW > 0 ? (trendingCount / maxTrendingKW) * 40 : 0;
+                        const googleScore = Math.min(30, googleMatch * 10);
+                        const demandScore = ((c.avgDailySales || 0) - minSales) / salesRange * 30;
+                        const momentum = Math.round(kwScore + googleScore + demandScore);
+                        const nicheData = keywordIntel.nicheAnalysis?.[catId] || [];
+                        return { catId, cat, c, trendingCount, googleMatch, momentum, nicheData };
                       }).sort((a, b) => b.momentum - a.momentum);
 
                       return (
                         <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                           <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{"\u{1F4C8}"} Category Trend Momentum</h3>
-                          <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>Categories ranked by trend strength (keyword trends + Google search + demand)</p>
+                          <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>Categories ranked by trend strength (keyword trends 40% + Google search 30% + relative demand 30%)</p>
                           <div style={{ maxHeight: 500, overflowY: "auto" }}>
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                               <thead><tr style={{ borderBottom: "2px solid #e2e8f0" }}>
-                                {["#", "Category", "Momentum", "Trending KW", "Google Match", "Avg Sales/Day", "Signal"].map(h => (
+                                {["#", "Category", "Momentum", "Trending KW", "Google Match", "Avg Sales/Day", "Top Niches", "Signal"].map(h => (
                                   <th key={h} style={{ padding: "8px 6px", textAlign: "left", fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase", position: "sticky", top: 0, background: "#fff" }}>{h}</th>
                                 ))}
                               </tr></thead>
                               <tbody>
                                 {trendMomentum.slice(0, 30).map((t, i) => (
-                                  <tr key={t.catId} style={{ borderBottom: "1px solid #f1f5f9", background: i < 3 ? "#ecfdf508" : "transparent" }}>
+                                  <tr key={t.catId} style={{ borderBottom: "1px solid #f1f5f9", background: i < 3 ? "#f0fdf408" : "transparent" }}>
                                     <td style={{ padding: "8px 6px", fontWeight: 700, fontSize: 13, color: i < 3 ? "#d97706" : "#94a3b8" }}>{i + 1}</td>
                                     <td style={{ padding: "8px 6px", fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{t.cat?.icon} {t.cat?.name}</td>
                                     <td style={{ padding: "8px 6px" }}>
                                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                         <div style={{ width: 60, height: 8, background: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
-                                          <div style={{ width: `${t.momentum}%`, height: "100%", background: t.momentum >= 60 ? "#10b981" : t.momentum >= 30 ? "#f59e0b" : "#94a3b8", borderRadius: 4 }} />
+                                          <div style={{ width: `${t.momentum}%`, height: "100%", background: t.momentum >= 70 ? "#10b981" : t.momentum >= 40 ? "#f59e0b" : "#94a3b8", borderRadius: 4 }} />
                                         </div>
-                                        <span style={{ fontSize: 12, fontWeight: 700, color: t.momentum >= 60 ? "#10b981" : t.momentum >= 30 ? "#f59e0b" : "#94a3b8" }}>{t.momentum}</span>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: t.momentum >= 70 ? "#10b981" : t.momentum >= 40 ? "#f59e0b" : "#94a3b8" }}>{t.momentum}</span>
                                       </div>
                                     </td>
                                     <td style={{ padding: "8px 6px", fontSize: 12, color: "#6366f1", fontWeight: 600 }}>{t.trendingCount}</td>
                                     <td style={{ padding: "8px 6px", fontSize: 12, color: "#3b82f6", fontWeight: 600 }}>{t.googleMatch}</td>
                                     <td style={{ padding: "8px 6px", fontSize: 12, color: "#0f172a" }}>~{t.c.avgDailySales || 0}</td>
+                                    <td style={{ padding: "8px 6px", maxWidth: 200 }}>
+                                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                                        {t.nicheData.slice(0, 3).map(n => (
+                                          <span key={n.niche} style={{
+                                            fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 6,
+                                            background: n.competition === 'Low' ? "#ecfdf5" : n.competition === 'Medium' ? "#fffbeb" : "#fef2f2",
+                                            color: n.competition === 'Low' ? "#059669" : n.competition === 'Medium' ? "#d97706" : "#dc2626",
+                                            whiteSpace: "nowrap"
+                                          }}>{n.niche} ({n.count})</span>
+                                        ))}
+                                        {t.nicheData.length === 0 && <span style={{ fontSize: 9, color: "#94a3b8" }}>-</span>}
+                                      </div>
+                                    </td>
                                     <td style={{ padding: "8px 6px" }}>
                                       <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 10,
-                                        background: t.momentum >= 60 ? "#ecfdf5" : t.momentum >= 30 ? "#fffbeb" : "#f8fafc",
-                                        color: t.momentum >= 60 ? "#059669" : t.momentum >= 30 ? "#d97706" : "#94a3b8"
-                                      }}>{t.momentum >= 60 ? "HOT" : t.momentum >= 30 ? "WARM" : "COOL"}</span>
+                                        background: t.momentum >= 70 ? "#ecfdf5" : t.momentum >= 40 ? "#fffbeb" : "#f8fafc",
+                                        color: t.momentum >= 70 ? "#059669" : t.momentum >= 40 ? "#d97706" : "#94a3b8"
+                                      }}>{t.momentum >= 70 ? "HOT" : t.momentum >= 40 ? "WARM" : "COOL"}</span>
                                     </td>
                                   </tr>
                                 ))}
@@ -2732,7 +2769,22 @@ function VitaView() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<VitaView />);
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, info) { console.error('React Error:', error, info); }
+  render() {
+    if (this.state.hasError) {
+      return React.createElement('div', { style: { padding: 40, fontFamily: 'monospace', color: '#dc2626' } },
+        React.createElement('h2', null, 'React Error'),
+        React.createElement('pre', null, this.state.error?.toString()),
+        React.createElement('button', { onClick: () => this.setState({ hasError: false }), style: { marginTop: 16, padding: '8px 16px', cursor: 'pointer' } }, 'Retry')
+      );
+    }
+    return this.props.children;
+  }
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<ErrorBoundary><VitaView /></ErrorBoundary>);
 </script>
 </body>
 </html>

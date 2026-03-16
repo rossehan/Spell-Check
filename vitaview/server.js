@@ -344,7 +344,19 @@ const STOP_WORDS = new Set([
   'supplement','supplements','serving','servings','supply','day','days','month','months','week','weeks',
   'made','usa','pack','per','oz','fl','lb','lbs','each','size','ct','bottle','bottles',
   'non','gmo','free','gluten','vegan','organic','natural','premium','extra','strength',
-  'men','women','adult','adults','kids','children','unflavored','flavor','flavored'
+  'men','women','adult','adults','kids','children','unflavored','flavor','flavored',
+  // Marketing/generic terms that don't differentiate products
+  'support','health','healthy','formula','plus','advanced','ultra','super','best','high','potency',
+  'quality','pure','essential','daily','maximum','max','pro','complete','complex','enhanced',
+  'original','new','now','brand','one','two','three','help','helps','body','contains',
+  'includes','also','may','well','good','great','just','like','all','more','most','very',
+  'dietary','nutrition','nutritional','intake','recommended','doctor','approved','tested',
+  'third','party','verified','certified','lab','manufactured','facility','gmp','cgmp',
+  'easy','swallow','take','form','based','plant','derived','source','sourced','added',
+  'food','grade','value','bonus','deal','sale','price','offer','special','limited',
+  'amazon','choice','seller','rated','star','stars','review','reviews',
+  'immune','energy','bone','joint','heart','brain','skin','hair','nail','nails','eye','eyes',
+  'muscle','digestive','gut','sleep','mood','stress','weight','loss','management'
 ]);
 
 function extractKeywords(title) {
@@ -490,6 +502,131 @@ app.get('/api/keyword-intelligence', (req, res) => {
     .slice(0, 15)
     .map(([keyword, count]) => ({ keyword, count }));
 
+  // 10. Niche analysis - specific sub-types within each category
+  const nicheAnalysis = {};
+  const NICHE_PATTERNS = {
+    protein: [
+      { niche: 'Whey Isolate', pattern: /whey\s*(protein\s*)?isolate/i },
+      { niche: 'Whey Concentrate', pattern: /whey\s*(protein\s*)?(concentrate|blend)/i },
+      { niche: 'Plant-Based Protein', pattern: /plant[\s-]*(based|protein)|pea\s*protein|hemp\s*protein|soy\s*protein|rice\s*protein/i },
+      { niche: 'Casein', pattern: /casein/i },
+      { niche: 'Collagen Protein', pattern: /collagen\s*protein|collagen\s*peptide/i },
+      { niche: 'Mass Gainer', pattern: /mass\s*gain|weight\s*gain|bulk/i },
+      { niche: 'Meal Replacement', pattern: /meal\s*replace|shake\s*mix/i },
+      { niche: 'Protein Bars', pattern: /protein\s*bar/i },
+      { niche: 'Egg White Protein', pattern: /egg\s*(white\s*)?protein/i },
+      { niche: 'Bone Broth Protein', pattern: /bone\s*broth/i },
+    ],
+    probiotics: [
+      { niche: 'Multi-Strain (50B+ CFU)', pattern: /(?:50|60|70|80|90|100)\s*billion/i },
+      { niche: 'Multi-Strain (Standard)', pattern: /(?:10|15|20|25|30|40)\s*billion/i },
+      { niche: 'Women Probiotic', pattern: /women|feminine|vaginal|cranberry.*probiotic|probiotic.*cranberry/i },
+      { niche: 'Kids Probiotic', pattern: /kids|children|child|toddler/i },
+      { niche: 'Prebiotic + Probiotic', pattern: /prebiotic.*probiotic|probiotic.*prebiotic|synbiotic/i },
+      { niche: 'Spore-Based', pattern: /spore|bacillus/i },
+      { niche: 'Saccharomyces', pattern: /saccharomyces|boulardii/i },
+      { niche: 'Soil-Based (SBO)', pattern: /soil[\s-]*based|sbo/i },
+    ],
+    collagen: [
+      { niche: 'Marine Collagen', pattern: /marine|fish\s*collagen/i },
+      { niche: 'Bovine Collagen', pattern: /bovine|grass[\s-]*fed\s*collagen/i },
+      { niche: 'Multi-Collagen (Type I,II,III)', pattern: /multi[\s-]*collagen|type\s*(?:i|1|ii|2|iii|3)/i },
+      { niche: 'Collagen Powder', pattern: /collagen\s*(?:powder|peptide)/i },
+      { niche: 'Collagen Gummies', pattern: /collagen\s*gumm/i },
+      { niche: 'Collagen + Biotin', pattern: /collagen.*biotin|biotin.*collagen/i },
+    ],
+    creatine: [
+      { niche: 'Creatine Monohydrate', pattern: /monohydrate/i },
+      { niche: 'Creatine HCL', pattern: /hcl|hydrochloride/i },
+      { niche: 'Micronized Creatine', pattern: /micronized/i },
+      { niche: 'Creatine Gummies', pattern: /creatine\s*gumm/i },
+      { niche: 'Creatine + Electrolytes', pattern: /creatine.*electrolyte|electrolyte.*creatine/i },
+    ],
+    vitaminD: [
+      { niche: 'D3 5000 IU', pattern: /5[,.]?000\s*(?:iu|mcg)/i },
+      { niche: 'D3 10000 IU', pattern: /10[,.]?000\s*iu/i },
+      { niche: 'D3 + K2', pattern: /d3.*k2|k2.*d3/i },
+      { niche: 'Liquid D3', pattern: /liquid.*(?:d3|vitamin\s*d)|(?:d3|vitamin\s*d).*(?:liquid|drop)/i },
+      { niche: 'D3 Gummies', pattern: /(?:d3|vitamin\s*d).*gumm/i },
+    ],
+    ashwagandha: [
+      { niche: 'KSM-66', pattern: /ksm[\s-]*66/i },
+      { niche: 'Sensoril', pattern: /sensoril/i },
+      { niche: 'Ashwagandha Root', pattern: /root\s*(extract|powder)/i },
+      { niche: 'Ashwagandha Gummies', pattern: /ashwagandha.*gumm/i },
+      { niche: 'Ashwagandha + Black Pepper', pattern: /ashwagandha.*(?:black\s*pepper|bioperine|piperine)/i },
+    ],
+    magnesium: [
+      { niche: 'Magnesium Glycinate', pattern: /glycinate|bisglycinate/i },
+      { niche: 'Magnesium Citrate', pattern: /citrate/i },
+      { niche: 'Magnesium L-Threonate', pattern: /threonate|magtein/i },
+      { niche: 'Magnesium Complex', pattern: /complex|(?:7|8)\s*(?:form|type)/i },
+      { niche: 'Magnesium Oxide', pattern: /oxide/i },
+      { niche: 'Magnesium Taurate', pattern: /taurate/i },
+    ],
+    omega: [
+      { niche: 'Triple Strength Fish Oil', pattern: /triple\s*strength|3600|3000/i },
+      { niche: 'EPA/DHA Concentrated', pattern: /(?:epa|dha)\s*(?:\d{3,4})/i },
+      { niche: 'Krill Oil', pattern: /krill/i },
+      { niche: 'Algae-Based Omega', pattern: /algae|algal|vegan\s*omega/i },
+      { niche: 'Omega-3 Gummies', pattern: /omega.*gumm/i },
+    ],
+    turmeric: [
+      { niche: 'Turmeric + Black Pepper', pattern: /turmeric.*(?:bioperine|black\s*pepper|piperine)/i },
+      { niche: 'Turmeric + Ginger', pattern: /turmeric.*ginger|ginger.*turmeric/i },
+      { niche: 'Curcumin Extract', pattern: /curcumin\s*(?:extract|95)/i },
+      { niche: 'Liquid Turmeric', pattern: /liquid.*turmeric|turmeric.*liquid/i },
+    ],
+  };
+  // Generic niche detection for categories without specific patterns
+  const genericNichePatterns = [
+    { niche: 'Liquid/Drops', pattern: /liquid|drop(?:s)?/i },
+    { niche: 'Gummies', pattern: /gumm(?:y|ies)/i },
+    { niche: 'Powder', pattern: /powder/i },
+    { niche: 'Softgels', pattern: /softgel/i },
+    { niche: 'With Black Pepper', pattern: /bioperine|black\s*pepper|piperine/i },
+    { niche: 'High Potency', pattern: /(?:1[0-9]{3,}|[2-9]\d{3,})\s*(?:mg|iu)/i },
+    { niche: 'Bundle/Multi-Pack', pattern: /(?:2|3|4)\s*(?:pack|bottle|count)|bundle/i },
+  ];
+
+  Object.entries(categoryProducts).forEach(([catId, products]) => {
+    const patterns = NICHE_PATTERNS[catId] || genericNichePatterns;
+    const niches = {};
+    products.forEach(p => {
+      let matched = false;
+      patterns.forEach(({ niche, pattern }) => {
+        if (pattern.test(p.title)) {
+          if (!niches[niche]) niches[niche] = { count: 0, prices: [], ranks: [], products: [] };
+          niches[niche].count++;
+          if (p.price) niches[niche].prices.push(p.price);
+          if (p.rank) niches[niche].ranks.push(p.rank);
+          if (niches[niche].products.length < 3) niches[niche].products.push({ title: p.title, price: p.price, rank: p.rank });
+          matched = true;
+        }
+      });
+      if (!matched) {
+        if (!niches['Other/General']) niches['Other/General'] = { count: 0, prices: [], ranks: [], products: [] };
+        niches['Other/General'].count++;
+        if (p.price) niches['Other/General'].prices.push(p.price);
+      }
+    });
+
+    nicheAnalysis[catId] = Object.entries(niches)
+      .map(([niche, data]) => ({
+        niche,
+        count: data.count,
+        share: Math.round((data.count / products.length) * 100),
+        avgPrice: data.prices.length ? +(data.prices.reduce((a, b) => a + b, 0) / data.prices.length).toFixed(2) : 0,
+        minPrice: data.prices.length ? +Math.min(...data.prices).toFixed(2) : 0,
+        maxPrice: data.prices.length ? +Math.max(...data.prices).toFixed(2) : 0,
+        avgRank: data.ranks.length ? Math.round(data.ranks.reduce((a, b) => a + b, 0) / data.ranks.length) : null,
+        topProducts: data.products || [],
+        competition: data.count >= 5 ? 'High' : data.count >= 2 ? 'Medium' : 'Low',
+      }))
+      .filter(n => n.niche !== 'Other/General' || n.count >= 2)
+      .sort((a, b) => b.count - a.count);
+  });
+
   res.json({
     totalProducts: allProducts.length,
     totalCategories: Object.keys(categoryProducts).length,
@@ -501,6 +638,7 @@ app.get('/api/keyword-intelligence', (req, res) => {
     formAnalysis,
     premiumKeywords: premiumOnlyKW,
     budgetKeywords: budgetOnlyKW,
+    nicheAnalysis,
     timestamp: new Date().toISOString()
   });
 });
