@@ -94,15 +94,44 @@
 ## Category Keywords (100 categories)
 vitamins, protein, omega, probiotics, collagen, magnesium, vitaminD, vitaminC, zinc, iron, calcium, biotin, melatonin, ashwagandha, creatine, turmeric, elderberry, fiber, multivitamin, bcaa, glutamine, coq10, vitaminB, vitaminE, vitaminK, potassium, selenium, manganese, lysine, glucosamine, spirulina, chlorella, echinacea, ginseng, garlic, greenTea, appleCiderVinegar, maca, saw_palmetto, milk_thistle, rhodiola, valerian, fenugreek, black_seed_oil, quercetin, resveratrol, lions_mane, reishi, berberine, digestive_enzymes, lutein, astaxanthin, dhea, five_htp, l_theanine, l_carnitine, alpha_lipoic_acid, nac, dim, tribulus, tongkat_ali, shilajit, cordyceps, chaga, turkey_tail, moringa, sea_moss, olive_leaf, oregano_oil, vitamin_a, folate, chromium, iodine, boron, copper, inositol, pqq, nmn, hyaluronic_acid, keratin, msm, chondroitin, bromelain, psyllium_husk, bovine_colostrum, beta_alanine, citrulline, electrolytes, whey_protein, casein, pea_protein, hemp_protein, fish_oil, krill_oil, evening_primrose, black_cohosh, st_johns_wort, bilberry
 
-## How to Update Files on Local PC
+## PowerShell Commands (Copy & Paste)
+
+### 처음 설치 (최초 1회)
 ```powershell
-cd C:\Users\admin\Desktop\supplemint-backend
-# Ctrl+C to stop server first
-iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/main/vitaview/server.js" -OutFile server.js
-iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/main/vitaview/dashboard.html" -OutFile dashboard.html
+cd C:\Users\admin\Desktop\claude
+npm init -y
+npm install express cors dotenv axios
+```
+
+### 파일 업데이트 (변경사항 반영)
+```powershell
+cd C:\Users\admin\Desktop\claude
+iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/claude/setup-supplemint-5e6W6/vitaview/server.js" -OutFile server.js
+iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/claude/setup-supplemint-5e6W6/vitaview/dashboard.html" -OutFile dashboard.html
+```
+
+### 서버 실행
+```powershell
+cd C:\Users\admin\Desktop\claude
 node server.js
 ```
-Then Ctrl+Shift+R in browser.
+
+### 서버 중지 후 재시작
+```
+Ctrl+C (서버 중지)
+node server.js
+```
+
+### 브라우저
+```
+http://localhost:3001
+Ctrl+Shift+R (하드 리프레시)
+```
+
+### 전체 한번에 (업데이트 + 서버 실행)
+```powershell
+cd C:\Users\admin\Desktop\claude; iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/claude/setup-supplemint-5e6W6/vitaview/server.js" -OutFile server.js; iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/claude/setup-supplemint-5e6W6/vitaview/dashboard.html" -OutFile dashboard.html; node server.js
+```
 
 ## User Preferences
 - Korean language communication (한국어)
