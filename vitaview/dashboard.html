@@ -339,7 +339,7 @@ function VitaView() {
   }, [activeTab, activeCategory]);
 
   useEffect(() => {
-    if (activeTab === "dashboard" && !trends) loadTrends();
+    if ((activeTab === "dashboard" || activeTab === "aiAnalysis") && !trends) loadTrends();
     if (activeTab === "browse") loadCategory(activeCategory);
   }, [activeTab, activeCategory]);
 
@@ -645,7 +645,7 @@ function VitaView() {
 
       {/* Nav */}
       <div style={{ padding: "0 32px", borderBottom: "1px solid #e2e8f0", display: "flex", gap: 4, background: "#fff" }}>
-        {[["dashboard", "\u{1F4CA} Dashboard"], ["browse", "\u{1F50D} Browse & Search"]].map(([id, label]) => (
+        {[["dashboard", "\u{1F4CA} Dashboard"], ["aiAnalysis", "\u{1F916} AI Domination"], ["browse", "\u{1F50D} Browse & Search"]].map(([id, label]) => (
           <button key={id} onClick={() => setActiveTab(id)} style={{
             background: "none", border: "none", cursor: "pointer", padding: "14px 16px",
             fontSize: 13, fontWeight: 600, color: activeTab === id ? "#10b981" : "#64748b",
@@ -1271,6 +1271,411 @@ function VitaView() {
               <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>{"\u{1F4CA}"}</div>
                 <p>Click "Refresh" to load trend analysis</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* AI DOMINATION ANALYSIS TAB */}
+        {activeTab === "aiAnalysis" && (
+          <div>
+            <div style={{ marginBottom: 24 }}>
+              <h1 style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{"\u{1F916}"} AI Market Domination Analysis</h1>
+              <p style={{ color: "#64748b" }}>Amazon US Supplement Market - Domination Opportunity Intelligence</p>
+            </div>
+
+            {trendsLoading && !trends ? <CategoryLoadingSpinner />
+            : trends ? (() => {
+              const cats = trends.categories || {};
+              const catEntries = Object.entries(cats);
+              if (catEntries.length === 0) return <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>No data. Click Refresh.</div>;
+
+              // ──── DOMINATION SCORE ALGORITHM ────
+              // Factors:
+              // 1. Market Fragmentation (30%) - Low HHI = many small brands = easier to dominate
+              // 2. Weak Leader (20%) - Low top brand share = no dominant player
+              // 3. Supply-Demand Gap (20%) - High demand + few products = underserved
+              // 4. Revenue Potential (15%) - High revenue = worth dominating
+              // 5. Price Gap Opportunity (15%) - Wide price spread = room for positioning
+
+              const maxRev = Math.max(...catEntries.map(([,c]) => c.estimatedMonthlyRevenue || 0), 1);
+              const maxSpread = Math.max(...catEntries.map(([,c]) => c.priceSpread || 0), 1);
+              const maxDailySales = Math.max(...catEntries.map(([,c]) => c.avgDailySales || 0), 1);
+              const maxProducts = Math.max(...catEntries.map(([,c]) => c.totalProducts || 0), 1);
+
+              const domScored = catEntries.map(([catId, c]) => {
+                const cat = CATEGORIES.find(ct => ct.id === catId);
+                const hhi = c.hhi || 0;
+                const topShare = c.topBrandShare || 0;
+                const brandCount = c.brandCount || Object.keys(c.brands || {}).length;
+                const totalProducts = c.totalProducts || 0;
+                const avgDailySales = c.avgDailySales || 0;
+                const revenue = c.estimatedMonthlyRevenue || 0;
+                const priceSpread = c.priceSpread || 0;
+                const avgPrice = c.avgPrice || 0;
+                const minPrice = c.minPrice || 0;
+                const maxPrice = c.maxPrice || 0;
+
+                // 1. Fragmentation Score (0-100) - Lower HHI = higher score
+                const fragmentationScore = Math.min(100, Math.max(0, 100 - (hhi / 100)));
+
+                // 2. Weak Leader Score (0-100) - Lower top brand share = higher
+                const weakLeaderScore = Math.min(100, Math.max(0, 100 - topShare * 2));
+
+                // 3. Supply-Demand Gap (0-100) - High sales per product count ratio
+                const demandPerProduct = totalProducts > 0 ? avgDailySales / Math.log10(totalProducts + 1) : 0;
+                const maxDPP = Math.max(...catEntries.map(([,cc]) => {
+                  const tp = cc.totalProducts || 1;
+                  return (cc.avgDailySales || 0) / Math.log10(tp + 1);
+                }), 1);
+                const supplyDemandScore = Math.round((demandPerProduct / maxDPP) * 100);
+
+                // 4. Revenue Potential (0-100)
+                const revenueScore = Math.round((revenue / maxRev) * 100);
+
+                // 5. Price Gap Score (0-100) - Wide spread = more room
+                const priceGapScore = Math.round((priceSpread / maxSpread) * 100);
+
+                // Weighted total
+                const dominationScore = Math.round(
+                  fragmentationScore * 0.30 +
+                  weakLeaderScore * 0.20 +
+                  supplyDemandScore * 0.20 +
+                  revenueScore * 0.15 +
+                  priceGapScore * 0.15
+                );
+
+                // Entry Strategy Recommendations
+                const recommendedPrice = avgPrice > 0 ? +(avgPrice * 0.85).toFixed(2) : 0; // 15% below avg
+                const premiumPrice = avgPrice > 0 ? +(avgPrice * 1.3).toFixed(2) : 0; // 30% premium
+                const topProducts = (c.topProducts || []).slice(0, 5);
+
+                // Detect dominant forms in category
+                const formCounts = {};
+                (c.topProducts || []).forEach(p => {
+                  const form = extractForm(p.title);
+                  formCounts[form] = (formCounts[form] || 0) + 1;
+                });
+                const dominantForm = Object.entries(formCounts).sort((a,b) => b[1] - a[1])[0]?.[0] || "Capsule";
+                const underservedForms = ["Gummy", "Softgel", "Powder", "Liquid", "Chewable", "Spray"].filter(f => !formCounts[f] || formCounts[f] <= 1);
+
+                // Difficulty level
+                const difficulty = dominationScore >= 70 ? "Easy" : dominationScore >= 50 ? "Medium" : "Hard";
+                const diffColor = dominationScore >= 70 ? "#10b981" : dominationScore >= 50 ? "#f59e0b" : "#ef4444";
+
+                // Brand concentration analysis
+                const brandEntries = Object.entries(c.brands || {}).sort((a,b) => b[1].revenue - a[1].revenue);
+                const top3BrandsRevenue = brandEntries.slice(0, 3).reduce((s, [,b]) => s + b.revenue, 0);
+                const totalRevenue = brandEntries.reduce((s, [,b]) => s + b.revenue, 0);
+                const top3Share = totalRevenue > 0 ? Math.round((top3BrandsRevenue / totalRevenue) * 100) : 0;
+
+                return {
+                  catId, cat, c,
+                  dominationScore, fragmentationScore: Math.round(fragmentationScore), weakLeaderScore: Math.round(weakLeaderScore),
+                  supplyDemandScore, revenueScore, priceGapScore,
+                  difficulty, diffColor,
+                  recommendedPrice, premiumPrice, avgPrice, minPrice, maxPrice,
+                  dominantForm, underservedForms,
+                  topProducts, brandCount, topShare, top3Share, hhi,
+                  brandEntries, revenue, avgDailySales, totalProducts
+                };
+              }).sort((a, b) => b.dominationScore - a.dominationScore);
+
+              const top10 = domScored.slice(0, 10);
+              const easyMarkets = domScored.filter(d => d.dominationScore >= 70);
+              const mediumMarkets = domScored.filter(d => d.dominationScore >= 50 && d.dominationScore < 70);
+              const hardMarkets = domScored.filter(d => d.dominationScore < 50);
+
+              return (
+                <div>
+                  {/* Summary Cards */}
+                  <div style={{ display: "flex", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
+                    {[
+                      { label: "Domination Easy", value: easyMarkets.length, sub: "Score 70+", color: "#10b981", bg: "#ecfdf5", border: "#a7f3d0" },
+                      { label: "Moderate Entry", value: mediumMarkets.length, sub: "Score 50-69", color: "#f59e0b", bg: "#fffbeb", border: "#fde68a" },
+                      { label: "Hard to Enter", value: hardMarkets.length, sub: "Score <50", color: "#ef4444", bg: "#fef2f2", border: "#fecaca" },
+                      { label: "Total Analyzed", value: domScored.length, sub: "Categories", color: "#6366f1", bg: "#eef2ff", border: "#c7d2fe" },
+                    ].map((s, i) => (
+                      <div key={i} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: "14px 20px", flex: "1 1 180px", minWidth: 150 }}>
+                        <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", marginTop: 2 }}>{s.label}</div>
+                        <div style={{ fontSize: 11, color: "#64748b" }}>{s.sub}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* TOP 1 Spotlight */}
+                  {top10[0] && (() => {
+                    const d = top10[0];
+                    return (
+                      <div style={{ background: "linear-gradient(135deg, #ecfdf5 0%, #eff6ff 50%, #fdf2f8 100%)", border: "2px solid #10b981", borderRadius: 16, padding: 28, marginBottom: 28, position: "relative", overflow: "hidden" }}>
+                        <div style={{ position: "absolute", top: 12, right: 16, background: "#10b981", color: "#fff", padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>#1 Best Opportunity</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+                          <span style={{ fontSize: 48 }}>{d.cat?.icon}</span>
+                          <div>
+                            <h2 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a" }}>{d.cat?.name || d.catId}</h2>
+                            <div style={{ fontSize: 14, color: "#64748b" }}>Domination Score: <span style={{ color: "#10b981", fontWeight: 700, fontSize: 20 }}>{d.dominationScore}</span>/100</div>
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+                          <div style={{ background: "rgba(255,255,255,0.8)", borderRadius: 10, padding: 14 }}>
+                            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 6 }}>WHY DOMINATE?</div>
+                            <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.6 }}>
+                              {d.hhi < 1500 ? "Market is highly fragmented - no single brand controls it. " : ""}
+                              {d.topShare < 30 ? "Top brand has only " + d.topShare + "% share. " : ""}
+                              {d.brandCount < 10 ? "Only " + d.brandCount + " brands competing. " : ""}
+                              {d.avgDailySales > 10 ? "Strong demand (~" + d.avgDailySales + " sales/day avg). " : ""}
+                              Perfect opportunity to enter and capture market share.
+                            </div>
+                          </div>
+                          <div style={{ background: "rgba(255,255,255,0.8)", borderRadius: 10, padding: 14 }}>
+                            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 6 }}>ENTRY STRATEGY</div>
+                            <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.6 }}>
+                              {"\u{1F4B0}"} Price at <strong>${d.recommendedPrice}</strong> (undercut avg ${d.avgPrice})<br/>
+                              {"\u{1F48A}"} Start with: <strong>{d.dominantForm}</strong><br/>
+                              {d.underservedForms.length > 0 && <>{"\u{1F4A1}"} Gap forms: <strong>{d.underservedForms.slice(0,3).join(", ")}</strong><br/></>}
+                              {"\u{1F4C8}"} Est. revenue: <strong>${d.revenue.toLocaleString()}/mo</strong>
+                            </div>
+                          </div>
+                          <div style={{ background: "rgba(255,255,255,0.8)", borderRadius: 10, padding: 14 }}>
+                            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 6 }}>MARKET DATA</div>
+                            <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.8 }}>
+                              HHI: <span style={{ color: d.hhi < 1500 ? "#10b981" : d.hhi < 2500 ? "#f59e0b" : "#ef4444", fontWeight: 600 }}>{d.hhi}</span> ({d.hhi < 1500 ? "Low competition" : d.hhi < 2500 ? "Medium" : "High"})<br/>
+                              Top brand: {d.c.topBrand} ({d.topShare}%)<br/>
+                              Top 3 share: {d.top3Share}% | Brands: {d.brandCount}<br/>
+                              Price range: ${d.minPrice.toFixed(2)} ~ ${d.maxPrice.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Domination Score Ranking - Full Table */}
+                  <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24, marginBottom: 28, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                      <div>
+                        <h3 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a" }}>{"\u{1F3AF}"} Domination Score Ranking</h3>
+                        <p style={{ fontSize: 12, color: "#64748b" }}>All categories ranked by domination potential</p>
+                      </div>
+                    </div>
+                    <div style={{ maxHeight: 600, overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead><tr style={{ borderBottom: "2px solid #e2e8f0" }}>
+                          {["#", "Category", "Score", "Fragmentation", "Weak Leader", "Supply Gap", "Revenue", "Price Gap", "Difficulty", "Entry Price"].map(h => (
+                            <th key={h} style={{ padding: "10px 8px", textAlign: h === "#" ? "center" : "left", color: "#64748b", fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, position: "sticky", top: 0, background: "#fff", whiteSpace: "nowrap" }}>{h}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>
+                          {domScored.map((d, i) => (
+                            <tr key={d.catId} style={{ borderBottom: "1px solid #f1f5f9", background: i < 3 ? `${d.diffColor}08` : "transparent" }}
+                              onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
+                              onMouseLeave={e => e.currentTarget.style.background = i < 3 ? `${d.diffColor}08` : "transparent"}>
+                              <td style={{ padding: "10px 8px", textAlign: "center", fontWeight: 700, fontSize: 14, color: i === 0 ? "#d97706" : i === 1 ? "#94a3b8" : i === 2 ? "#c2410c" : "#cbd5e1" }}>{i + 1}</td>
+                              <td style={{ padding: "10px 8px", fontWeight: 600, fontSize: 13, color: "#0f172a", whiteSpace: "nowrap" }}>{d.cat?.icon} {d.cat?.name || d.catId}</td>
+                              <td style={{ padding: "10px 8px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                  <div style={{ width: 60, height: 8, background: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
+                                    <div style={{ width: `${d.dominationScore}%`, height: "100%", background: d.diffColor, borderRadius: 4 }} />
+                                  </div>
+                                  <span style={{ fontWeight: 700, fontSize: 13, color: d.diffColor, minWidth: 24 }}>{d.dominationScore}</span>
+                                </div>
+                              </td>
+                              <td style={{ padding: "10px 8px", fontSize: 12, color: "#0ea5e9" }}>{d.fragmentationScore}</td>
+                              <td style={{ padding: "10px 8px", fontSize: 12, color: "#8b5cf6" }}>{d.weakLeaderScore}</td>
+                              <td style={{ padding: "10px 8px", fontSize: 12, color: "#f59e0b" }}>{d.supplyDemandScore}</td>
+                              <td style={{ padding: "10px 8px", fontSize: 12, color: "#10b981" }}>{d.revenueScore}</td>
+                              <td style={{ padding: "10px 8px", fontSize: 12, color: "#ec4899" }}>{d.priceGapScore}</td>
+                              <td style={{ padding: "10px 8px" }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10, background: `${d.diffColor}15`, color: d.diffColor }}>{d.difficulty}</span>
+                              </td>
+                              <td style={{ padding: "10px 8px", fontSize: 12, fontWeight: 600, color: "#0f172a" }}>${d.recommendedPrice}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Top 10 Detailed Cards */}
+                  <div style={{ marginBottom: 16 }}>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{"\u{1F4CB}"} Top 10 Domination Targets - Detailed Analysis</h3>
+                    <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>Entry strategies, competitor landscape, and recommended actions</p>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 28 }}>
+                    {top10.map((d, i) => (
+                      <div key={d.catId} style={{ background: "#fff", border: `1px solid ${i < 3 ? d.diffColor + "44" : "#e2e8f0"}`, borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 10, background: `${d.diffColor}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: d.diffColor }}>{i + 1}</div>
+                            <span style={{ fontSize: 28 }}>{d.cat?.icon}</span>
+                            <div>
+                              <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{d.cat?.name || d.catId}</div>
+                              <div style={{ fontSize: 12, color: "#64748b" }}>Score: <span style={{ color: d.diffColor, fontWeight: 700 }}>{d.dominationScore}</span> | {d.difficulty}</div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: "#10b981" }}>${d.revenue.toLocaleString()}</div>
+                            <div style={{ fontSize: 11, color: "#64748b" }}>Est. Monthly Revenue</div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
+                          {/* Score Breakdown */}
+                          <div style={{ background: "#f8fafc", borderRadius: 10, padding: 12 }}>
+                            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 8 }}>SCORE BREAKDOWN</div>
+                            {[
+                              { label: "Fragmentation", value: d.fragmentationScore, color: "#0ea5e9" },
+                              { label: "Weak Leader", value: d.weakLeaderScore, color: "#8b5cf6" },
+                              { label: "Supply Gap", value: d.supplyDemandScore, color: "#f59e0b" },
+                              { label: "Revenue", value: d.revenueScore, color: "#10b981" },
+                              { label: "Price Gap", value: d.priceGapScore, color: "#ec4899" },
+                            ].map(s => (
+                              <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                <span style={{ fontSize: 10, color: "#64748b", width: 80, flexShrink: 0 }}>{s.label}</span>
+                                <div style={{ flex: 1, height: 5, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
+                                  <div style={{ width: `${s.value}%`, height: "100%", background: s.color, borderRadius: 3 }} />
+                                </div>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: s.color, width: 22, textAlign: "right" }}>{s.value}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Entry Strategy */}
+                          <div style={{ background: "#f0fdf4", borderRadius: 10, padding: 12 }}>
+                            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 8 }}>ENTRY STRATEGY</div>
+                            <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.8 }}>
+                              <div>{"\u{1F4B0}"} <strong>Budget entry:</strong> ${d.recommendedPrice}</div>
+                              <div>{"\u{1F451}"} <strong>Premium:</strong> ${d.premiumPrice}</div>
+                              <div>{"\u{1F48A}"} <strong>Main form:</strong> {d.dominantForm}</div>
+                              {d.underservedForms.length > 0 && <div>{"\u{1F4A1}"} <strong>Gap:</strong> {d.underservedForms.slice(0,3).join(", ")}</div>}
+                              <div>{"\u{1F6D2}"} <strong>Products:</strong> {d.totalProducts.toLocaleString()}</div>
+                              <div>{"\u{1F4C8}"} <strong>Demand:</strong> ~{d.avgDailySales}/day avg</div>
+                            </div>
+                          </div>
+
+                          {/* Competitor Landscape */}
+                          <div style={{ background: "#faf5ff", borderRadius: 10, padding: 12 }}>
+                            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 8 }}>COMPETITORS</div>
+                            <div style={{ fontSize: 12, color: "#334155", lineHeight: 1.6 }}>
+                              <div style={{ marginBottom: 6 }}>
+                                HHI: <span style={{ color: d.hhi < 1500 ? "#10b981" : d.hhi < 2500 ? "#f59e0b" : "#ef4444", fontWeight: 700 }}>{d.hhi}</span>
+                                <span style={{ fontSize: 10, color: "#64748b", marginLeft: 4 }}>({d.hhi < 1500 ? "Fragmented" : d.hhi < 2500 ? "Moderate" : "Concentrated"})</span>
+                              </div>
+                              <div style={{ marginBottom: 4 }}>Brands: {d.brandCount} | Top3: {d.top3Share}%</div>
+                              {d.brandEntries.slice(0, 4).map(([brand, data], bi) => (
+                                <div key={brand} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748b", padding: "1px 0" }}>
+                                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>{bi + 1}. {brand}</span>
+                                  <span style={{ color: "#10b981", fontWeight: 600, flexShrink: 0 }}>${Math.round(data.revenue).toLocaleString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Top Products in this category */}
+                        {d.topProducts.length > 0 && (
+                          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
+                            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 6 }}>TOP COMPETING PRODUCTS</div>
+                            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                              {d.topProducts.map((p, pi) => {
+                                const est = estimateDailySales(p.rank);
+                                return (
+                                  <div key={p.asin} onClick={() => setSelectedProduct({
+                                    asin: p.asin, summaries: [{ itemName: p.title }],
+                                    attributes: { brand: [{ value: p.brand }], ...(p.price ? { list_price: [{ value: p.price }] } : {}) },
+                                    salesRanks: p.rank ? [{ ranks: [{ rank: p.rank }] }] : [],
+                                    images: p.image ? [{ images: [{ link: p.image }] }] : [],
+                                  })} style={{ display: "flex", gap: 8, padding: 8, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", minWidth: 260, flexShrink: 0 }}
+                                    onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"}
+                                    onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
+                                    {p.image && <img src={p.image} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "contain", background: "#fff" }} />}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ fontSize: 11, color: "#0f172a", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
+                                      <div style={{ display: "flex", gap: 6, marginTop: 2, fontSize: 10, color: "#64748b" }}>
+                                        {p.price && <span style={{ fontWeight: 600 }}>${p.price.toFixed(2)}</span>}
+                                        <span style={{ color: "#10b981" }}>#{p.rank?.toLocaleString()}</span>
+                                        {est && <span style={{ color: "#2563eb" }}>~{est}/day</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* AI Recommendation Summary */}
+                  <div style={{ background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)", borderRadius: 16, padding: 28, marginBottom: 28, color: "#fff" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                      <span style={{ fontSize: 24 }}>{"\u{1F916}"}</span>
+                      <h3 style={{ fontSize: 18, fontWeight: 700 }}>AI Recommendation Summary</h3>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                      <div>
+                        <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 600, marginBottom: 8 }}>IMMEDIATE ENTRY (Score 70+)</div>
+                        {easyMarkets.slice(0, 5).map(d => (
+                          <div key={d.catId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                            <span style={{ fontSize: 16 }}>{d.cat?.icon}</span>
+                            <span style={{ flex: 1, fontSize: 13 }}>{d.cat?.name}</span>
+                            <span style={{ fontSize: 12, color: "#10b981", fontWeight: 700 }}>{d.dominationScore}</span>
+                            <span style={{ fontSize: 11, color: "#94a3b8" }}>${d.recommendedPrice}</span>
+                          </div>
+                        ))}
+                        {easyMarkets.length === 0 && <div style={{ fontSize: 13, color: "#64748b" }}>No easy domination targets found at this time.</div>}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 600, marginBottom: 8 }}>HIGH REVENUE TARGETS</div>
+                        {[...domScored].sort((a,b) => b.revenue - a.revenue).slice(0, 5).map(d => (
+                          <div key={d.catId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                            <span style={{ fontSize: 16 }}>{d.cat?.icon}</span>
+                            <span style={{ flex: 1, fontSize: 13 }}>{d.cat?.name}</span>
+                            <span style={{ fontSize: 12, color: "#10b981", fontWeight: 700 }}>${(d.revenue / 1000).toFixed(0)}K</span>
+                            <span style={{ fontSize: 11, color: d.diffColor }}>{d.difficulty}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 20, padding: "14px 16px", background: "rgba(16,185,129,0.15)", borderRadius: 10, border: "1px solid rgba(16,185,129,0.3)" }}>
+                      <div style={{ fontSize: 13, color: "#a7f3d0", fontWeight: 600, marginBottom: 4 }}>{"\u{1F4A1}"} AI Insight</div>
+                      <div style={{ fontSize: 13, color: "#e2e8f0", lineHeight: 1.6 }}>
+                        {easyMarkets.length > 0
+                          ? `${easyMarkets.length} categories show strong domination potential. ${top10[0]?.cat?.name || "Top market"} is the #1 recommendation with a domination score of ${top10[0]?.dominationScore}. ` +
+                            `Consider entering with ${top10[0]?.dominantForm} form at $${top10[0]?.recommendedPrice} price point. ` +
+                            (top10[0]?.underservedForms.length > 0 ? `${top10[0]?.underservedForms[0]} form is an underserved gap in this market.` : "")
+                          : "Current market conditions are competitive. Consider niche positioning and differentiated products to gain market share. Focus on underserved forms and price gaps."}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Methodology */}
+                  <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>{"\u{1F4D0}"} Domination Score Methodology</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+                      {[
+                        { label: "Fragmentation (30%)", desc: "HHI-based market concentration. Lower = easier to enter", color: "#0ea5e9" },
+                        { label: "Weak Leader (20%)", desc: "Top brand market share. Lower share = no dominant player", color: "#8b5cf6" },
+                        { label: "Supply-Demand Gap (20%)", desc: "Demand per product count. Higher = underserved market", color: "#f59e0b" },
+                        { label: "Revenue Potential (15%)", desc: "Estimated monthly revenue. Higher = more reward", color: "#10b981" },
+                        { label: "Price Gap (15%)", desc: "Price range spread. Wider = more positioning room", color: "#ec4899" },
+                      ].map(m => (
+                        <div key={m.label} style={{ padding: 10, background: "#f8fafc", borderRadius: 8, borderLeft: `3px solid ${m.color}` }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: m.color, marginBottom: 4 }}>{m.label}</div>
+                          <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.4 }}>{m.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })() : (
+              <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>{"\u{1F916}"}</div>
+                <p>Click "Refresh" to load data for AI analysis</p>
               </div>
             )}
           </div>

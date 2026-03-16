@@ -52,6 +52,14 @@
 31. Keyword filtering in dashboard (filter categories by keyword like "Peptide", "Gummy", etc.)
 32. New categories added: Lutein, Astaxanthin, DHEA, 5-HTP, L-Theanine, L-Carnitine, ALA, NAC, DIM, Tribulus, Tongkat Ali, Shilajit, Cordyceps, Chaga, Turkey Tail, Moringa, Sea Moss, Olive Leaf, Oregano Oil, Vitamin A, Folate, Chromium, Iodine, Boron, Copper, Inositol, PQQ, NMN, Hyaluronic Acid, Keratin, MSM, Chondroitin, Bromelain, Psyllium Husk, Bovine Colostrum, Beta Alanine, Citrulline, Electrolytes, Whey Protein, Casein, Pea Protein, Hemp Protein, Fish Oil, Krill Oil, Evening Primrose, Black Cohosh, St. John's Wort, Bilberry
 
+33. AI Market Domination Analysis tab - separate tab with full domination scoring algorithm
+34. Domination Score = Fragmentation(30%) + Weak Leader(20%) + Supply-Demand Gap(20%) + Revenue(15%) + Price Gap(15%)
+35. Top 1 Spotlight card with WHY DOMINATE, ENTRY STRATEGY, MARKET DATA
+36. Full ranking table with all factor scores and difficulty levels
+37. Top 10 detailed cards with score breakdown, entry strategy, competitor landscape, top products
+38. AI Recommendation Summary (dark theme) with immediate entry targets and high revenue targets
+39. Methodology explainer section
+
 ## SP-API Data Structure (CRITICAL - DO NOT FORGET)
 - **Price**: `list_price[0].value` is a direct NUMBER (e.g. 17.98), NOT `{amount: "xx.xx"}`
   - Use `extractPrice()` helper in server.js
@@ -90,8 +98,8 @@ vitamins, protein, omega, probiotics, collagen, magnesium, vitaminD, vitaminC, z
 ```powershell
 cd C:\Users\admin\Desktop\supplemint-backend
 # Ctrl+C to stop server first
-iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/claude/setup-supplemint-5e6W6/vitaview/server.js" -OutFile server.js
-iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/claude/setup-supplemint-5e6W6/vitaview/dashboard.html" -OutFile dashboard.html
+iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/main/vitaview/server.js" -OutFile server.js
+iwr "https://raw.githubusercontent.com/rossehan/Spell-Check/main/vitaview/dashboard.html" -OutFile dashboard.html
 node server.js
 ```
 Then Ctrl+Shift+R in browser.
