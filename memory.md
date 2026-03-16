@@ -6,7 +6,7 @@
 - .env keys: SP_API_CLIENT_ID, SP_API_CLIENT_SECRET, SP_API_REFRESH_TOKEN, MARKETPLACE_ID
 
 ## Local Setup (User's PC)
-- Path: C:\Users\admin\Desktop\supplemint-backend
+- Path: C:\Users\admin\Desktop\claude
 - Files: server.js, dashboard.html, .env, package.json, node_modules/
 - Run: `node server.js` -> http://localhost:3001
 - NOT a git repo locally; files downloaded via `iwr` from GitHub raw
