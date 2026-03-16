@@ -100,6 +100,14 @@ tr:hover{background:#f8f9ff}
 .step-row .step-input:focus{border-color:#1a73e8;outline:none}
 .step-row .step-unit{font-size:12px;color:#888;flex-shrink:0}
 .step-row.zero-days{opacity:.5}
+.parallel-header{background:linear-gradient(90deg,#e8f0fe,#f3e8fd);padding:10px 14px;border-radius:8px;margin:16px 0 8px;font-size:13px;font-weight:600;color:#1a73e8;display:flex;align-items:center;gap:8px}
+.parallel-end{border-top:2px dashed #c8d6e5;margin:8px 0 16px;padding-top:8px;font-size:12px;color:#888;font-weight:500;text-align:center}
+.track-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-left:8px;vertical-align:middle}
+.tb-inspect{background:#e3f2fd;color:#1565c0}
+.tb-stability{background:#fff3e0;color:#e65100}
+.tb-design{background:#f3e5f5;color:#6a1b9a}
+.tb-inspect2{background:#e3f2fd;color:#1565c0}
+.tb-design2{background:#f3e5f5;color:#6a1b9a}
 .total-bar{background:#1a73e8;color:#fff;padding:14px 20px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-weight:600;margin-top:12px}
 /* Autocomplete */
 .ac-wrap{position:relative}
@@ -323,51 +331,59 @@ const oemList=[
 {name:'뉴트리원',sub:'건기식 ODM/OEM'},
 ];
 
+// 트랙 색상 정의
+const trackMeta={
+'검사·인허가':{css:'tb-inspect',label:'검사·인허가'},
+'안정성':{css:'tb-stability',label:'안정성'},
+'디자인·광고':{css:'tb-design',label:'디자인·광고'},
+'검사·신고':{css:'tb-inspect2',label:'검사·신고'},
+'디자인':{css:'tb-design2',label:'디자인'}
+};
 const scheduleSteps={
 health:[
-{id:'concept',name:'제품 기획/컨셉 수립',defaultDays:7,basis:'시장조사 범위, 경쟁제품 수에 따라. 카테고리 확정 시 3일, 리서치부터 시 14일',desc:'타겟 소비자, 기능성 방향, 경쟁제품 분석'},
-{id:'ingredient',name:'기능성 원료 검토/선정',defaultDays:5,basis:'고시형 원료(95종) 중 선택. 원료 샘플 수급, 함량 비교에 따라 변동',desc:'고시형 원료 선택, 함량 결정, 원료사 견적'},
-{id:'formula',name:'배합 설계 (레시피)',defaultDays:7,basis:'OEM 연구원 배정 속도, 배합 복잡도(단일 vs 복합), 부형제 종류',desc:'배합비 설계, 부원료/부형제 선정'},
-{id:'sample',name:'시제품 제작/테스트',defaultDays:14,basis:'시제품 횟수(1~3회), 맛/안정성 보완, OEM 라인 일정',desc:'소량 시제품, 관능평가, 안정성 테스트'},
-{id:'nutrition',name:'영양성분 분석',defaultDays:7,basis:'공인기관(KFRI, SGS 등) 9대 영양소 분석. 일반 7~14일, 특급 3~5일',desc:'영양성분 표시용 9대 영양소 분석 의뢰'},
-{id:'stability',name:'안정성 시험',defaultDays:30,basis:'가속시험(40°C/75%RH) 최소 1개월~6개월. 장기보존은 실제 유통기한 기간',desc:'유통기한 설정 근거 (가속시험/장기보존시험)'},
-{id:'standard',name:'기준규격 검사',defaultDays:7,basis:'성상/기능성분 정량/붕해/미생물(세균,대장균군)/중금속(납,카드뮴,수은,비소). 공인기관 7~14일',desc:'건기식 기준규격 적합 여부 확인'},
-{id:'design',name:'포장 디자인/인쇄',defaultDays:14,basis:'시안 수정 횟수, 인쇄 방식(디지털/옵셋), 포장재 수급',desc:'법정 표시사항 포함 라벨/포장 디자인'},
-{id:'barcode',name:'바코드 발급',defaultDays:3,basis:'GS1 Korea 업체코드 보유 시 1일, 신규 5~7일',desc:'GS1 Korea GTIN 생성'},
-{id:'ad_review',name:'광고심의 (패키지/광고)',defaultDays:7,basis:'한국건강기능식품협회 사전심의 필수. 5~7영업일. 보완 시 +5일',desc:'건기식 패키지/광고 기능성 표현 사전심의'},
-{id:'approval',name:'품목제조신고',defaultDays:10,basis:'식약처 처리 + 서류 보완 여부. 서류 완벽 5일, 보완 시 14일',desc:'식약처: 제조방법설명서, 시험검사성적서 제출'},
-{id:'production',name:'양산 (GMP 공장)',defaultDays:10,basis:'수량, OEM 공장 라인 스케줄, 원료 입고 리드타임',desc:'GMP/HACCP 인증 공장 본생산'},
-{id:'finished_qc',name:'완제품 검사 (출하검사)',defaultDays:7,basis:'양산 후 기준규격 전항목 재검사. 공인기관 위탁 시 7~14일',desc:'완제품 기준규격 전항목 검사, 적합 시 출하'},
-{id:'ship',name:'출하 및 입고',defaultDays:3,basis:'출하검사 적합 후 물류센터/창고 입고 리드타임',desc:'출하검사 통과 후 물류 배송'},
+{id:'concept',name:'제품 기획/컨셉 수립',defaultDays:7,group:1,track:null,basis:'시장조사 범위, 경쟁제품 수에 따라. 카테고리 확정 시 3일, 리서치부터 시 14일',desc:'타겟 소비자, 기능성 방향, 경쟁제품 분석'},
+{id:'ingredient',name:'기능성 원료 검토/선정',defaultDays:5,group:2,track:null,basis:'고시형 원료(95종) 중 선택. 원료 샘플 수급, 함량 비교에 따라 변동',desc:'고시형 원료 선택, 함량 결정, 원료사 견적'},
+{id:'formula',name:'배합 설계 (레시피)',defaultDays:7,group:3,track:null,basis:'OEM 연구원 배정 속도, 배합 복잡도(단일 vs 복합), 부형제 종류',desc:'배합비 설계, 부원료/부형제 선정'},
+{id:'sample',name:'시제품 제작/테스트',defaultDays:14,group:4,track:null,basis:'시제품 횟수(1~3회), 맛/안정성 보완, OEM 라인 일정',desc:'소량 시제품, 관능평가, 안정성 테스트'},
+{id:'nutrition',name:'영양성분 분석',defaultDays:7,group:5,track:'검사·인허가',basis:'공인기관(KFRI, SGS 등) 9대 영양소 분석. 일반 7~14일, 특급 3~5일',desc:'영양성분 표시용 9대 영양소 분석 의뢰'},
+{id:'standard',name:'기준규격 검사',defaultDays:7,group:5,track:'검사·인허가',basis:'성상/기능성분 정량/붕해/미생물(세균,대장균군)/중금속(납,카드뮴,수은,비소). 공인기관 7~14일',desc:'건기식 기준규격 적합 여부 확인'},
+{id:'approval',name:'품목제조신고',defaultDays:10,group:5,track:'검사·인허가',basis:'식약처 처리 + 서류 보완 여부. 서류 완벽 5일, 보완 시 14일',desc:'식약처: 제조방법설명서, 시험검사성적서 제출'},
+{id:'stability',name:'안정성 시험',defaultDays:30,group:5,track:'안정성',basis:'가속시험(40°C/75%RH) 최소 1개월~6개월. 장기보존은 실제 유통기한 기간',desc:'유통기한 설정 근거 (가속시험/장기보존시험)'},
+{id:'design',name:'포장 디자인/인쇄',defaultDays:14,group:5,track:'디자인·광고',basis:'시안 수정 횟수, 인쇄 방식(디지털/옵셋), 포장재 수급',desc:'법정 표시사항 포함 라벨/포장 디자인'},
+{id:'barcode',name:'바코드 발급',defaultDays:3,group:5,track:'디자인·광고',basis:'GS1 Korea 업체코드 보유 시 1일, 신규 5~7일',desc:'GS1 Korea GTIN 생성'},
+{id:'ad_review',name:'광고심의 (패키지/광고)',defaultDays:7,group:5,track:'디자인·광고',basis:'한국건강기능식품협회 사전심의 필수. 5~7영업일. 보완 시 +5일',desc:'건기식 패키지/광고 기능성 표현 사전심의'},
+{id:'production',name:'양산 (GMP 공장)',defaultDays:10,group:6,track:null,basis:'수량, OEM 공장 라인 스케줄, 원료 입고 리드타임',desc:'GMP/HACCP 인증 공장 본생산'},
+{id:'finished_qc',name:'완제품 검사 (출하검사)',defaultDays:7,group:7,track:null,basis:'양산 후 기준규격 전항목 재검사. 공인기관 위탁 시 7~14일',desc:'완제품 기준규격 전항목 검사, 적합 시 출하'},
+{id:'ship',name:'출하 및 입고',defaultDays:3,group:8,track:null,basis:'출하검사 적합 후 물류센터/창고 입고 리드타임',desc:'출하검사 통과 후 물류 배송'},
 ],
 health_individual:[
-{id:'concept',name:'제품 기획/컨셉 수립',defaultDays:7,basis:'시장조사 범위에 따라 결정',desc:'타겟 소비자, 기능성 방향, 경쟁제품 분석'},
-{id:'ingredient',name:'개별인정형 원료 인정 신청',defaultDays:120,basis:'식약처 심사: 신규 120일, 기능성 추가 60일. 보완 시 180일+',desc:'식약처 개별인정 심사 + 임상시험 자료'},
-{id:'formula',name:'배합 설계 (레시피)',defaultDays:7,basis:'OEM 연구원 배정, 배합 복잡도',desc:'OEM 연구원 배합비 설계'},
-{id:'sample',name:'시제품 제작/테스트',defaultDays:14,basis:'시제품 횟수, 임상결과 반영 보완',desc:'소량 시제품, 임상시험 결과 반영'},
-{id:'nutrition',name:'영양성분 분석',defaultDays:7,basis:'공인기관 9대 영양소 분석',desc:'영양성분 표시용 분석'},
-{id:'stability',name:'안정성 시험',defaultDays:30,basis:'가속시험(40°C/75%RH) 또는 장기보존',desc:'유통기한 설정 근거'},
-{id:'standard',name:'기준규격 검사',defaultDays:7,basis:'성상/기능성분 정량/미생물/중금속. 공인기관 7~14일',desc:'건기식 기준규격 적합 확인'},
-{id:'design',name:'포장 디자인/인쇄',defaultDays:14,basis:'수정 횟수, 포장재 수급',desc:'법정 표시사항 포함 디자인'},
-{id:'barcode',name:'바코드 발급',defaultDays:3,basis:'GS1 Korea 업체코드 보유 여부',desc:'GS1 Korea GTIN'},
-{id:'ad_review',name:'광고심의 (패키지/광고)',defaultDays:7,basis:'한국건강기능식품협회 사전심의. 개별인정형은 더 엄격',desc:'패키지/광고 기능성 표현 심의'},
-{id:'approval',name:'품목제조신고',defaultDays:10,basis:'식약처 처리 + 개별인정형 서류 추가',desc:'식약처 + 개별인정 서류'},
-{id:'production',name:'양산 (GMP 공장)',defaultDays:10,basis:'수량, 공장 라인 일정',desc:'GMP/HACCP 공장 본생산'},
-{id:'finished_qc',name:'완제품 검사 (출하검사)',defaultDays:7,basis:'기준규격 전항목 재검사',desc:'완제품 검사'},
-{id:'ship',name:'출하 및 입고',defaultDays:3,basis:'물류 리드타임',desc:'출하 후 배송'},
+{id:'concept',name:'제품 기획/컨셉 수립',defaultDays:7,group:1,track:null,basis:'시장조사 범위에 따라 결정',desc:'타겟 소비자, 기능성 방향, 경쟁제품 분석'},
+{id:'ingredient',name:'개별인정형 원료 인정 신청',defaultDays:120,group:2,track:null,basis:'식약처 심사: 신규 120일, 기능성 추가 60일. 보완 시 180일+',desc:'식약처 개별인정 심사 + 임상시험 자료'},
+{id:'formula',name:'배합 설계 (레시피)',defaultDays:7,group:3,track:null,basis:'OEM 연구원 배정, 배합 복잡도',desc:'OEM 연구원 배합비 설계'},
+{id:'sample',name:'시제품 제작/테스트',defaultDays:14,group:4,track:null,basis:'시제품 횟수, 임상결과 반영 보완',desc:'소량 시제품, 임상시험 결과 반영'},
+{id:'nutrition',name:'영양성분 분석',defaultDays:7,group:5,track:'검사·인허가',basis:'공인기관 9대 영양소 분석',desc:'영양성분 표시용 분석'},
+{id:'standard',name:'기준규격 검사',defaultDays:7,group:5,track:'검사·인허가',basis:'성상/기능성분 정량/미생물/중금속. 공인기관 7~14일',desc:'건기식 기준규격 적합 확인'},
+{id:'approval',name:'품목제조신고',defaultDays:10,group:5,track:'검사·인허가',basis:'식약처 처리 + 개별인정형 서류 추가',desc:'식약처 + 개별인정 서류'},
+{id:'stability',name:'안정성 시험',defaultDays:30,group:5,track:'안정성',basis:'가속시험(40°C/75%RH) 또는 장기보존',desc:'유통기한 설정 근거'},
+{id:'design',name:'포장 디자인/인쇄',defaultDays:14,group:5,track:'디자인·광고',basis:'수정 횟수, 포장재 수급',desc:'법정 표시사항 포함 디자인'},
+{id:'barcode',name:'바코드 발급',defaultDays:3,group:5,track:'디자인·광고',basis:'GS1 Korea 업체코드 보유 여부',desc:'GS1 Korea GTIN'},
+{id:'ad_review',name:'광고심의 (패키지/광고)',defaultDays:7,group:5,track:'디자인·광고',basis:'한국건강기능식품협회 사전심의. 개별인정형은 더 엄격',desc:'패키지/광고 기능성 표현 심의'},
+{id:'production',name:'양산 (GMP 공장)',defaultDays:10,group:6,track:null,basis:'수량, 공장 라인 일정',desc:'GMP/HACCP 공장 본생산'},
+{id:'finished_qc',name:'완제품 검사 (출하검사)',defaultDays:7,group:7,track:null,basis:'기준규격 전항목 재검사',desc:'완제품 검사'},
+{id:'ship',name:'출하 및 입고',defaultDays:3,group:8,track:null,basis:'물류 리드타임',desc:'출하 후 배송'},
 ],
 general:[
-{id:'concept',name:'제품 기획/컨셉 수립',defaultDays:5,basis:'시장조사 범위, 컨셉 확정 여부',desc:'제품 유형, 타겟 시장, 맛/형태 결정'},
-{id:'ingredient',name:'레시피 개발/원료 소싱',defaultDays:7,basis:'원재료 수급 난이도, 수입 원료, 레시피 복잡도',desc:'원재료 선정, 배합비 설계, 공급업체 확보'},
-{id:'sample',name:'시제품 제작/테스트',defaultDays:7,basis:'시제품 횟수, 관능평가 보완, 보존성 테스트',desc:'소량 생산, 관능평가, 보존성 테스트'},
-{id:'nutrition',name:'영양성분 분석',defaultDays:7,basis:'공인기관 9대 영양소 분석. 2023.7.1부터 신규품목 의무',desc:'영양성분 표시용 분석 의뢰'},
-{id:'stability',name:'안정성/보존성 시험',defaultDays:14,basis:'소비기한 설정 근거. 가속시험 또는 유사제품 참고',desc:'소비기한 설정을 위한 보존성 테스트'},
-{id:'design',name:'포장 디자인/인쇄',defaultDays:10,basis:'수정, 인쇄 방식, 포장재 수급',desc:'식품표시기준 라벨, 포장재 선정'},
-{id:'barcode',name:'바코드 발급',defaultDays:3,basis:'GS1 Korea 업체코드 보유 여부',desc:'GS1 Korea 바코드'},
-{id:'report',name:'품목제조보고',defaultDays:2,basis:'시군구청 처리속도, 서류 준비 상태',desc:'관할 시/군/구청 보고'},
-{id:'production',name:'양산 (HACCP 공장)',defaultDays:7,basis:'수량, HACCP 공장 라인, 원료 입고',desc:'HACCP 공장 제조'},
-{id:'self_qc',name:'자가품질검사',defaultDays:5,basis:'법적 의무. 미생물(세균수/대장균군)/이물/식품첨가물. 자체 또는 위탁',desc:'법적 의무 자가품질검사'},
-{id:'ship',name:'출하 및 입고',defaultDays:2,basis:'포장 완료, 물류 준비 상태',desc:'검사 적합 후 출고'},
+{id:'concept',name:'제품 기획/컨셉 수립',defaultDays:5,group:1,track:null,basis:'시장조사 범위, 컨셉 확정 여부',desc:'제품 유형, 타겟 시장, 맛/형태 결정'},
+{id:'ingredient',name:'레시피 개발/원료 소싱',defaultDays:7,group:2,track:null,basis:'원재료 수급 난이도, 수입 원료, 레시피 복잡도',desc:'원재료 선정, 배합비 설계, 공급업체 확보'},
+{id:'sample',name:'시제품 제작/테스트',defaultDays:7,group:3,track:null,basis:'시제품 횟수, 관능평가 보완, 보존성 테스트',desc:'소량 생산, 관능평가, 보존성 테스트'},
+{id:'nutrition',name:'영양성분 분석',defaultDays:7,group:4,track:'검사·신고',basis:'공인기관 9대 영양소 분석. 2023.7.1부터 신규품목 의무',desc:'영양성분 표시용 분석 의뢰'},
+{id:'report',name:'품목제조보고',defaultDays:2,group:4,track:'검사·신고',basis:'시군구청 처리속도, 서류 준비 상태',desc:'관할 시/군/구청 보고'},
+{id:'stability',name:'안정성/보존성 시험',defaultDays:14,group:4,track:'안정성',basis:'소비기한 설정 근거. 가속시험 또는 유사제품 참고',desc:'소비기한 설정을 위한 보존성 테스트'},
+{id:'design',name:'포장 디자인/인쇄',defaultDays:10,group:4,track:'디자인',basis:'수정, 인쇄 방식, 포장재 수급',desc:'식품표시기준 라벨, 포장재 선정'},
+{id:'barcode',name:'바코드 발급',defaultDays:3,group:4,track:'디자인',basis:'GS1 Korea 업체코드 보유 여부',desc:'GS1 Korea 바코드'},
+{id:'production',name:'양산 (HACCP 공장)',defaultDays:7,group:5,track:null,basis:'수량, HACCP 공장 라인, 원료 입고',desc:'HACCP 공장 제조'},
+{id:'self_qc',name:'자가품질검사',defaultDays:5,group:6,track:null,basis:'법적 의무. 미생물(세균수/대장균군)/이물/식품첨가물. 자체 또는 위탁',desc:'법적 의무 자가품질검사'},
+{id:'ship',name:'출하 및 입고',defaultDays:2,group:7,track:null,basis:'포장 완료, 물류 준비 상태',desc:'검사 적합 후 출고'},
 ]};
 
 const checklistData={
@@ -392,20 +408,43 @@ phase6:[{title:'OEM 계약서 체결',desc:'위탁생산 계약'},{title:'HACCP 
 function switchTab(t){currentTab=t;const tabs=['schedule','checklist','manufacturer','projects'];document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',tabs[i]===t));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');if(t==='checklist')renderChecklist();if(t==='projects')renderProjects();if(t==='schedule')renderStepInputs()}
 function switchSearchTab(t){currentSearchTab=t;document.querySelectorAll('#tab-manufacturer .inner-tab').forEach((el,i)=>{const tabs=['health_mfr','general_mfr','haccp_mfr'];el.classList.toggle('active',tabs[i]===t)})}
 
-// STEP INPUTS (number input, 0부터 시작 가능)
+// 그룹 분석: 병렬 그룹 식별
+function analyzeGroups(steps){
+const gmap=new Map();
+steps.forEach(s=>{if(!gmap.has(s.group))gmap.set(s.group,new Set());gmap.get(s.group).add(s.track||'main')});
+const parallel=new Set();
+gmap.forEach((tracks,g)=>{if(tracks.size>1)parallel.add(g)});
+return parallel
+}
+
+// STEP INPUTS (number input, 0부터 시작 가능, 병렬 구간 표시)
 function renderStepInputs(){
 const type=document.getElementById('productType').value;
 const steps=scheduleSteps[type];
-document.getElementById('stepInputs').innerHTML=steps.map((s,i)=>
-`<div class="step-row" id="row_${s.id}">
-<div class="step-num">${i+1}</div>
+const parallel=analyzeGroups(steps);
+let html='',num=1,inParallel=false;
+steps.forEach((s,i)=>{
+const isP=parallel.has(s.group);
+if(isP&&!inParallel){
+html+=`<div class="parallel-header"><span>&#8644;</span> 병렬 구간 — 아래 단계들은 동시에 진행됩니다 (가장 긴 트랙 기준)</div>`;
+inParallel=true
+}
+if(!isP&&inParallel){
+html+=`<div class="parallel-end">&#9650; 병렬 구간 종료 — 모든 트랙 완료 후 다음 단계 진행</div>`;
+inParallel=false
+}
+const tb=s.track&&trackMeta[s.track]?`<span class="track-badge ${trackMeta[s.track].css}">${trackMeta[s.track].label}</span>`:'';
+html+=`<div class="step-row${s.defaultDays===0?' zero-days':''}" id="row_${s.id}">
+<div class="step-num">${num++}</div>
 <div class="step-info">
-<div class="step-name">${s.name}</div>
+<div class="step-name">${s.name}${tb}</div>
 <div class="step-basis">${s.basis}</div>
 </div>
 <input type="number" class="step-input" id="input_${s.id}" min="0" max="365" value="${s.defaultDays}" onchange="onStepChange('${s.id}')" oninput="onStepChange('${s.id}')">
 <div class="step-unit">일</div>
-</div>`).join('');
+</div>`});
+if(inParallel)html+=`<div class="parallel-end">&#9650; 병렬 구간 종료 — 모든 트랙 완료 후 다음 단계 진행</div>`;
+document.getElementById('stepInputs').innerHTML=html;
 updateTotalDisplay()
 }
 function onStepChange(id){
@@ -414,45 +453,108 @@ const val=parseInt(document.getElementById('input_'+id).value)||0;
 row.classList.toggle('zero-days',val===0);
 updateTotalDisplay()
 }
+function calcParallelTotal(steps){
+// 그룹별 실제 소요일 계산 (병렬 그룹은 max)
+const gmap=new Map();
+steps.forEach(s=>{
+const days=parseInt(document.getElementById('input_'+s.id)?.value)||0;
+const g=s.group;const t=s.track||'main';
+if(!gmap.has(g))gmap.set(g,new Map());
+const tmap=gmap.get(g);
+tmap.set(t,(tmap.get(t)||0)+days)
+});
+let total=0;
+gmap.forEach(tmap=>{total+=Math.max(...tmap.values(),0)});
+return total
+}
 function updateTotalDisplay(){
 const type=document.getElementById('productType').value;
 const steps=scheduleSteps[type];
-let total=0;
-steps.forEach(s=>{const el=document.getElementById('input_'+s.id);if(el)total+=parseInt(el.value)||0});
-document.getElementById('totalDaysDisplay').textContent=`${total}일 (${(total/7).toFixed(1)}주 / ${(total/30).toFixed(1)}개월)`
+let seqTotal=0;
+steps.forEach(s=>{const el=document.getElementById('input_'+s.id);if(el)seqTotal+=parseInt(el.value)||0});
+const realTotal=calcParallelTotal(steps);
+const saved=seqTotal-realTotal;
+let txt=`${realTotal}일 (${(realTotal/7).toFixed(1)}주 / ${(realTotal/30).toFixed(1)}개월)`;
+if(saved>0)txt+=` | 병렬로 ${saved}일 단축`;
+document.getElementById('totalDaysDisplay').textContent=txt
 }
 
-// SCHEDULE CALCULATOR
+// SCHEDULE CALCULATOR (병렬 트랙 지원)
 function calculateSchedule(){
 const type=document.getElementById('productType').value;
 const targetDateStr=document.getElementById('targetDate').value;
 if(!targetDateStr){alert('출시 희망일을 선택해주세요.');return}
 const targetDate=new Date(targetDateStr);
 const steps=scheduleSteps[type];
-let dates=[];
+const parallel=analyzeGroups(steps);
+
+// 그룹별로 정리
+const groupOrder=[];const groupMap=new Map();
+steps.forEach(s=>{
+const days=parseInt(document.getElementById('input_'+s.id)?.value)||0;
+if(!groupMap.has(s.group)){groupMap.set(s.group,{tracks:new Map(),isParallel:parallel.has(s.group)});groupOrder.push(s.group)}
+const gd=groupMap.get(s.group);const t=s.track||'main';
+if(!gd.tracks.has(t))gd.tracks.set(t,[]);
+gd.tracks.get(t).push({...s,days})
+});
+
+// 각 그룹 소요일 계산
+const groupDurations=new Map();
+groupOrder.forEach(g=>{
+const gd=groupMap.get(g);let maxTrack=0;
+gd.tracks.forEach((tSteps,tName)=>{
+const tSum=tSteps.reduce((a,s)=>a+s.days,0);
+if(tSum>maxTrack)maxTrack=tSum
+});
+groupDurations.set(g,maxTrack)
+});
+
+// 역산: 뒤에서부터 날짜 배정
 let currentEnd=new Date(targetDate);
-for(let i=steps.length-1;i>=0;i--){
-const days=parseInt(document.getElementById('input_'+steps[i].id)?.value)||0;
-if(days===0){dates.unshift({...steps[i],start:null,end:null,days:0});continue}
-const stepEnd=new Date(currentEnd);
-const stepStart=new Date(currentEnd);
-stepStart.setDate(stepStart.getDate()-days);
-dates.unshift({...steps[i],start:new Date(stepStart),end:new Date(stepEnd),days});
-currentEnd=new Date(stepStart)
+const allDated=[];// {step data + start/end/trackName}
+for(let gi=groupOrder.length-1;gi>=0;gi--){
+const g=groupOrder[gi];const gd=groupMap.get(g);const gDur=groupDurations.get(g);
+if(gDur===0){
+gd.tracks.forEach((tSteps,tName)=>tSteps.forEach(s=>allDated.unshift({...s,start:null,end:null,trackName:tName==='main'?null:tName})));
+continue
 }
-const activeDates=dates.filter(d=>d.days>0);
+const groupEnd=new Date(currentEnd);
+const groupStart=new Date(currentEnd);groupStart.setDate(groupStart.getDate()-gDur);
+
+// 각 트랙 내 순차 배정 (groupStart부터 앞으로)
+gd.tracks.forEach((tSteps,tName)=>{
+let tCur=new Date(groupStart);
+const results=[];
+tSteps.forEach(s=>{
+if(s.days===0){results.push({...s,start:null,end:null,trackName:tName==='main'?null:tName});return}
+const sStart=new Date(tCur);const sEnd=new Date(tCur);sEnd.setDate(sEnd.getDate()+s.days);
+results.push({...s,start:sStart,end:sEnd,trackName:tName==='main'?null:tName});
+tCur=new Date(sEnd)
+});
+allDated.unshift(...results)
+});
+currentEnd=new Date(groupStart)
+}
+
+const activeDates=allDated.filter(d=>d.days>0);
 if(!activeDates.length){alert('최소 1개 단계에 일수를 입력해주세요.');return}
-const startDate=activeDates[0].start;
+const startDate=activeDates.reduce((min,d)=>d.start<min?d.start:min,activeDates[0].start);
 const totalDays=Math.round((targetDate-startDate)/(864e5));
+const seqTotal=steps.reduce((a,s)=>a+(parseInt(document.getElementById('input_'+s.id)?.value)||0),0);
+const saved=seqTotal-totalDays;
 const today=new Date();today.setHours(0,0,0,0);
 const daysFromNow=Math.round((startDate-today)/(864e5));
+const typeLabel=type==='health'?'건강기능식품 (고시형)':type==='health_individual'?'건강기능식품 (개별인정형)':'일반식품';
 let html=`<div class="alert ${daysFromNow<0?'alert-warning':'alert-success'}">${daysFromNow<0?`<strong>주의:</strong> 시작일이 이미 ${Math.abs(daysFromNow)}일 지났습니다.`:`<strong>시작일:</strong> ${fmt(startDate)} (${daysFromNow}일 후)`}</div>
-<table><tr><th>총 소요기간</th><td><strong>${totalDays}일</strong> (${(totalDays/7).toFixed(1)}주 / ${(totalDays/30).toFixed(1)}개월)</td></tr>
+<table><tr><th>총 소요기간 (병렬 반영)</th><td><strong>${totalDays}일</strong> (${(totalDays/7).toFixed(1)}주 / ${(totalDays/30).toFixed(1)}개월)${saved>0?` <span class="badge badge-green">순차대비 ${saved}일 단축</span>`:''}</td></tr>
+<tr><th>순차 합산 시</th><td>${seqTotal}일 (${(seqTotal/7).toFixed(1)}주)</td></tr>
 <tr><th>시작일</th><td>${fmt(startDate)}</td></tr><tr><th>출시 목표일</th><td>${fmt(targetDate)}</td></tr>
-<tr><th>제품 유형</th><td>${type==='health'?'건강기능식품 (고시형)':type==='health_individual'?'건강기능식품 (개별인정형)':'일반식품'}</td></tr></table>
+<tr><th>제품 유형</th><td>${typeLabel}</td></tr></table>
 <h4 style="margin-top:20px;margin-bottom:12px;">단계별 일정</h4>
-<table><tr><th>단계</th><th>시작일</th><th>종료일</th><th>소요</th><th>측정기준</th></tr>
-${activeDates.map(d=>`<tr><td><strong>${d.name}</strong><br><span style="font-size:11px;color:#888">${d.desc}</span></td><td>${fmt(d.start)}</td><td>${fmt(d.end)}</td><td><strong>${d.days}일</strong></td><td style="font-size:11px;color:#888;max-width:200px">${d.basis}</td></tr>`).join('')}</table>`;
+<table><tr><th>단계</th><th>트랙</th><th>시작일</th><th>종료일</th><th>소요</th><th>측정기준</th></tr>
+${activeDates.map(d=>{
+const tb=d.trackName&&trackMeta[d.trackName]?`<span class="track-badge ${trackMeta[d.trackName].css}">${trackMeta[d.trackName].label}</span>`:'<span style="color:#888;font-size:11px">순차</span>';
+return `<tr><td><strong>${d.name}</strong><br><span style="font-size:11px;color:#888">${d.desc}</span></td><td>${tb}</td><td>${fmt(d.start)}</td><td>${fmt(d.end)}</td><td><strong>${d.days}일</strong></td><td style="font-size:11px;color:#888;max-width:200px">${d.basis}</td></tr>`}).join('')}</table>`;
 document.getElementById('scheduleResult').innerHTML=html;
 document.getElementById('resultCard').style.display='block';
 renderGantt(activeDates,startDate,targetDate);renderTimeline(activeDates,today);
@@ -460,12 +562,16 @@ document.getElementById('ganttCard').style.display='block';document.getElementBy
 }
 function renderGantt(dates,startDate,endDate){
 const totalDays=Math.round((endDate-startDate)/(864e5));if(totalDays<=0)return;
-const colors=['#1a73e8','#0f9d58','#f9ab00','#ea4335','#ab47bc','#00acc1','#ff7043','#8d6e63','#78909c'];
+const trackBarColors={'검사·인허가':'#1a73e8','안정성':'#f9ab00','디자인·광고':'#ab47bc','검사·신고':'#1a73e8','디자인':'#ab47bc'};
+const defaultColors=['#0f9d58','#00acc1','#ff7043','#8d6e63','#78909c','#ea4335'];
+let ci=0;
 let months=[];let d=new Date(startDate);while(d<=endDate){months.push({y:d.getFullYear(),m:d.getMonth()});d.setMonth(d.getMonth()+1)}
 document.getElementById('ganttChart').innerHTML=
 `<div class="gantt-months">${months.map(m=>`<div class="gantt-month">${m.y}.${String(m.m+1).padStart(2,'0')}</div>`).join('')}</div>`+
-dates.map((s,i)=>{const off=Math.round((s.start-startDate)/(864e5));const l=off/totalDays*100;const w=Math.max(s.days/totalDays*100,2);
-return `<div class="gantt-row"><div class="gantt-label">${s.name}</div><div class="gantt-bar-area"><div class="gantt-bar" style="left:${l}%;width:${w}%;background:${colors[i%colors.length]}">${s.days}d</div></div></div>`}).join('')
+dates.map(s=>{const off=Math.round((s.start-startDate)/(864e5));const l=off/totalDays*100;const w=Math.max(s.days/totalDays*100,2);
+const color=s.trackName&&trackBarColors[s.trackName]?trackBarColors[s.trackName]:defaultColors[ci++%defaultColors.length];
+const label=s.trackName?`${s.name}`:s.name;
+return `<div class="gantt-row"><div class="gantt-label">${label}</div><div class="gantt-bar-area"><div class="gantt-bar" style="left:${l}%;width:${w}%;background:${color}">${s.days}d</div></div></div>`}).join('')
 }
 function renderTimeline(dates,today){
 document.getElementById('timelineView').innerHTML=dates.map(d=>{let st='';if(today>d.end)st='completed';else if(today>=d.start&&today<=d.end)st='current';
