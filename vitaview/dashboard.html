@@ -337,10 +337,8 @@ function VitaView() {
   const [longtailCategory, setLongtailCategory] = useState("");
 
   // AI Formulator states
-  const [formulatorConcern, setFormulatorConcern] = useState("sleep");
   const [formulatorResult, setFormulatorResult] = useState(null);
   const [formulatorLoading, setFormulatorLoading] = useState(false);
-  const [formulatorContext, setFormulatorContext] = useState(null);
   const [showRawData, setShowRawData] = useState(false);
 
   // Market Intelligence states (legacy, kept for data)
@@ -1387,100 +1385,76 @@ function VitaView() {
           </div>
         )}
 
-        {/* AI SUPPLEMENT FORMULATOR TAB */}
+        {/* AI SUPPLEMENT FORMULATOR TAB - AUTO RECOMMEND */}
         {activeTab === "marketIntel" && (
           <div>
-            <div style={{ marginBottom: 24 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{"\u{1F4A1}"} AI Supplement Formulator</h1>
-              <p style={{ color: "#64748b" }}>5개 API 데이터 기반 AI가 제안하는 넥스트 히트 영양제</p>
-            </div>
-
-            {/* Health Concern Selector */}
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24, marginBottom: 24 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 14 }}>어떤 건강 카테고리의 신제품을 기획할까요?</h3>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-                {[
-                  ["sleep", "\u{1F31C} Sleep"],
-                  ["immunity", "\u{1F6E1}\uFE0F Immunity"],
-                  ["gut", "\u{1F9EC} Gut Health"],
-                  ["energy", "\u26A1 Energy"],
-                  ["beauty", "\u2728 Beauty"],
-                  ["weight", "\u{1F3CB}\uFE0F Weight"],
-                  ["joints", "\u{1F9B4} Joints"],
-                  ["mens", "\u{1F4AA} Men's"],
-                  ["womens", "\u{1F338} Women's"],
-                  ["longevity", "\u{1F9EC} Longevity"],
-                  ["stress", "\u{1F9D8} Stress"],
-                  ["muscle", "\u{1F3CB}\uFE0F Muscle"]
-                ].map(([id, label]) => (
-                  <button key={id} onClick={() => setFormulatorConcern(id)} style={{
-                    background: formulatorConcern === id ? "linear-gradient(135deg, #10b981, #059669)" : "#f8fafc",
-                    border: `1px solid ${formulatorConcern === id ? "#10b981" : "#e2e8f0"}`,
-                    borderRadius: 10, padding: "10px 18px", cursor: "pointer",
-                    fontSize: 13, fontWeight: 600,
-                    color: formulatorConcern === id ? "#fff" : "#334155",
-                    boxShadow: formulatorConcern === id ? "0 2px 8px rgba(16,185,129,0.3)" : "none",
-                    transition: "all 0.2s"
-                  }}>{label}</button>
-                ))}
-              </div>
-              <button onClick={() => {
-                setFormulatorResult(null);
-                setFormulatorContext(null);
-                setFormulatorLoading(true);
-                setShowRawData(false);
-                fetch(`${API_BASE}/api/ai-formulator/generate?concern=${formulatorConcern}`)
-                  .then(r => r.json())
-                  .then(d => {
-                    if (d.aiFormulation) setFormulatorResult(d);
-                    else if (d.contextData) { setFormulatorContext(d.contextData); setFormulatorResult(d); }
-                    else setFormulatorResult(d);
-                  })
-                  .catch(e => setFormulatorResult({ error: e.message }))
-                  .finally(() => setFormulatorLoading(false));
-              }} disabled={formulatorLoading} style={{
-                background: formulatorLoading ? "#94a3b8" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                border: "none", borderRadius: 10, padding: "12px 28px", color: "#fff",
-                fontSize: 15, fontWeight: 700, cursor: formulatorLoading ? "not-allowed" : "pointer",
-                boxShadow: "0 4px 12px rgba(99,102,241,0.3)"
-              }}>
-                {formulatorLoading ? "\u23F3 AI 분석 중... (약 15-30초)" : "\u{1F916} AI 신제품 기획안 생성"}
-              </button>
-            </div>
-
-            {/* Loading state */}
-            {formulatorLoading && (
-              <div style={{ textAlign: "center", padding: 60, background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0" }}>
-                <div style={{ width: 60, height: 60, border: "4px solid rgba(99,102,241,0.2)", borderTopColor: "#6366f1", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 20px" }} />
-                <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a", marginBottom: 8 }}>AI가 데이터를 분석하고 있습니다</div>
-                <div style={{ fontSize: 13, color: "#94a3b8" }}>SP-API + Reddit + FDA + Google Trends 데이터를 종합 분석 중...</div>
-                <div style={{ fontSize: 12, color: "#cbd5e1", marginTop: 12 }}>Powered by Gemini 2.0 Flash</div>
+            {/* Header + CTA */}
+            {!formulatorResult && !formulatorLoading && (
+              <div style={{ textAlign: "center", padding: "60px 20px" }}>
+                <div style={{ fontSize: 60, marginBottom: 20 }}>🤖</div>
+                <h1 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>AI가 답을 알려드립니다</h1>
+                <p style={{ fontSize: 16, color: "#64748b", marginBottom: 8, maxWidth: 500, margin: "0 auto 8px" }}>
+                  아마존 전체 건기식 시장 데이터를 분석해서
+                </p>
+                <p style={{ fontSize: 18, fontWeight: 700, color: "#6366f1", marginBottom: 32 }}>
+                  "지금 당장 이 제품을 만들어라" 를 알려드립니다
+                </p>
+                <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 28 }}>
+                  {[
+                    ["📊", "SP-API", `${Object.keys(trendsData?.categories || {}).length}개 카테고리`],
+                    ["💬", "Reddit", "소비자 불만"],
+                    ["🏥", "FDA", "안전성 검증"],
+                    ["🧠", "Gemini AI", "최종 분석"]
+                  ].map(([icon, label, desc], i) => (
+                    <div key={i} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 16px", minWidth: 120 }}>
+                      <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{label}</div>
+                      <div style={{ fontSize: 10, color: "#94a3b8" }}>{desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => {
+                  setFormulatorResult(null);
+                  setFormulatorLoading(true);
+                  setShowRawData(false);
+                  fetch(`${API_BASE}/api/ai-formulator/auto-recommend`)
+                    .then(r => r.json())
+                    .then(d => setFormulatorResult(d))
+                    .catch(e => setFormulatorResult({ error: e.message }))
+                    .finally(() => setFormulatorLoading(false));
+                }} style={{
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  border: "none", borderRadius: 14, padding: "18px 48px", color: "#fff",
+                  fontSize: 18, fontWeight: 800, cursor: "pointer",
+                  boxShadow: "0 8px 24px rgba(99,102,241,0.4)",
+                  transition: "all 0.2s"
+                }}>
+                  🚀 지금 바로 분석 시작
+                </button>
+                <div style={{ fontSize: 11, color: "#cbd5e1", marginTop: 12 }}>약 15-30초 소요 | Powered by Gemini 2.0 Flash</div>
               </div>
             )}
 
-            {/* No API Key Warning */}
-            {formulatorResult && formulatorResult.error === 'GEMINI_API_KEY not set' && (
-              <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#92400e", marginBottom: 8 }}>{"\u26A0\uFE0F"} Gemini API Key 필요</h3>
-                <p style={{ fontSize: 13, color: "#92400e", marginBottom: 12 }}>{formulatorResult.message}</p>
-                <div style={{ background: "#fef3c7", borderRadius: 8, padding: 14, fontSize: 12, color: "#78350f" }}>
-                  <strong>설정 방법:</strong><br/>
-                  1. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb" }}>https://aistudio.google.com/apikey</a> 에서 무료 API 키 발급<br/>
-                  2. .env 파일에 <code>GEMINI_API_KEY=your_key_here</code> 추가<br/>
-                  3. 서버 재시작: <code>node server.js</code>
+            {/* Loading state */}
+            {formulatorLoading && (
+              <div style={{ textAlign: "center", padding: 80, background: "linear-gradient(135deg, #0f172a, #1e293b)", borderRadius: 18, color: "#fff" }}>
+                <div style={{ width: 70, height: 70, border: "4px solid rgba(99,102,241,0.2)", borderTopColor: "#a5b4fc", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 24px" }} />
+                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>AI가 전체 시장을 분석하고 있습니다</div>
+                <div style={{ display: "flex", gap: 20, justifyContent: "center", marginTop: 20, flexWrap: "wrap" }}>
+                  {["📊 SP-API 데이터 수집", "💬 Reddit 불만 분석", "🏥 FDA 안전성 확인", "🧠 AI 최종 판단"].map((step, i) => (
+                    <div key={i} style={{ fontSize: 12, color: "#94a3b8", padding: "6px 14px", background: "rgba(255,255,255,0.05)", borderRadius: 8 }}>{step}</div>
+                  ))}
                 </div>
-                {formulatorResult.contextData && (
-                  <div style={{ marginTop: 16 }}>
-                    <button onClick={() => setShowRawData(!showRawData)} style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", color: "#64748b" }}>
-                      {showRawData ? "Hide" : "Show"} Raw Data (수집 성공)
-                    </button>
-                    {showRawData && (
-                      <pre style={{ background: "#0f172a", color: "#a7f3d0", borderRadius: 8, padding: 16, marginTop: 8, fontSize: 11, maxHeight: 400, overflow: "auto", whiteSpace: "pre-wrap" }}>
-                        {JSON.stringify(formulatorResult.contextData, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                )}
+                <div style={{ fontSize: 12, color: "#475569", marginTop: 20 }}>Powered by Gemini 2.0 Flash</div>
+              </div>
+            )}
+
+            {/* Error state */}
+            {formulatorResult && formulatorResult.error && !formulatorResult.aiFormulation && (
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 14, padding: 24, textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#dc2626", marginBottom: 8 }}>오류 발생</div>
+                <div style={{ fontSize: 13, color: "#991b1b", marginBottom: 16 }}>{formulatorResult.message || formulatorResult.error}</div>
+                <button onClick={() => setFormulatorResult(null)} style={{ background: "#ef4444", border: "none", borderRadius: 8, padding: "8px 20px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>다시 시도</button>
               </div>
             )}
 
@@ -1491,23 +1465,44 @@ function VitaView() {
               const tlBg = f.fdaTrafficLight === "GREEN" ? "#ecfdf5" : f.fdaTrafficLight === "YELLOW" ? "#fffbeb" : f.fdaTrafficLight === "RED" ? "#fef2f2" : "#f8fafc";
               const vmScore = f.viralMomentumScore || 0;
               const vmColor = vmScore >= 70 ? "#10b981" : vmScore >= 40 ? "#f59e0b" : "#ef4444";
+              const mo = formulatorResult.marketOverview;
               return (
                 <div>
+                  {/* ═══ VERDICT BANNER ═══ */}
+                  <div style={{ background: "linear-gradient(135deg, #059669, #10b981)", borderRadius: 14, padding: "16px 24px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ color: "#fff" }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: 1 }}>AI VERDICT</span>
+                      <div style={{ fontSize: 16, fontWeight: 800 }}>
+                        {mo ? `${mo.totalCategories}개 카테고리 분석 완료` : "분석 완료"} → 이 제품을 만드세요
+                      </div>
+                    </div>
+                    <button onClick={() => setFormulatorResult(null)} style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "8px 16px", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      다시 분석
+                    </button>
+                  </div>
+
                   {/* ═══ HERO: Product Name & Form ═══ */}
                   <div style={{ background: "linear-gradient(135deg, #0f172a, #1e293b)", borderRadius: 18, padding: "36px 32px", marginBottom: 20, color: "#fff", position: "relative", overflow: "hidden" }}>
                     <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, background: "radial-gradient(circle, rgba(99,102,241,0.12), transparent)", borderRadius: "50%" }} />
-                    <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 600, letterSpacing: 2, marginBottom: 10, textTransform: "uppercase" }}>{"\u{1F4A1}"} AI NEXT HIT SUPPLEMENT</div>
+                    <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 600, letterSpacing: 2, marginBottom: 10, textTransform: "uppercase" }}>🤖 AI가 선택한 넥스트 히트 건기식</div>
                     <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 6, background: "linear-gradient(135deg, #a7f3d0, #93c5fd)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                       {f.productName || "Product"}
                     </h2>
                     <p style={{ fontSize: 15, color: "#cbd5e1", marginBottom: 16 }}>{f.productNameKr}</p>
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                       {f.formType && <span style={{ background: "rgba(99,102,241,0.2)", color: "#a5b4fc", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, border: "1px solid rgba(99,102,241,0.3)" }}>{f.formType}</span>}
-                      {f.pricingStrategy && <span style={{ background: "rgba(16,185,129,0.15)", color: "#6ee7b7", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>${f.pricingStrategy.suggestedPrice} | Monthly ${f.pricingStrategy.monthlyProfit?.toLocaleString?.() || f.pricingStrategy.monthlyProfit}</span>}
+                      {f.pricingStrategy && <span style={{ background: "rgba(16,185,129,0.15)", color: "#6ee7b7", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>${f.pricingStrategy.suggestedPrice} | 월순이익 ${f.pricingStrategy.monthlyProfit?.toLocaleString?.() || f.pricingStrategy.monthlyProfit}</span>}
                     </div>
                     {f.tagline && (
                       <div style={{ marginTop: 18, borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 14 }}>
                         <div style={{ fontSize: 16, color: "#e2e8f0", fontWeight: 500, fontStyle: "italic", lineHeight: 1.5 }}>"{f.tagline}"</div>
+                      </div>
+                    )}
+                    {/* Why this category */}
+                    {f.whyThisCategory && (
+                      <div style={{ marginTop: 14, background: "rgba(99,102,241,0.1)", borderRadius: 10, padding: "12px 16px", borderLeft: "3px solid #6366f1" }}>
+                        <div style={{ fontSize: 10, color: "#a5b4fc", fontWeight: 600, marginBottom: 4 }}>왜 이 카테고리인가?</div>
+                        <div style={{ fontSize: 13, color: "#e2e8f0", lineHeight: 1.5 }}>{f.whyThisCategory}</div>
                       </div>
                     )}
                   </div>
@@ -1636,8 +1631,8 @@ function VitaView() {
                       padding: "12px 18px", fontSize: 13, cursor: "pointer", color: "#64748b", fontWeight: 600,
                       display: "flex", justifyContent: "space-between", alignItems: "center"
                     }}>
-                      <span>{"\u{1F4CB}"} 이 결론의 데이터 근거 보기 (View Data Sources)</span>
-                      <span style={{ fontSize: 18, transition: "transform 0.2s", transform: showRawData ? "rotate(180deg)" : "rotate(0)" }}>{"\u25BC"}</span>
+                      <span>📋 이 결론의 데이터 근거 보기</span>
+                      <span style={{ fontSize: 18, transition: "transform 0.2s", transform: showRawData ? "rotate(180deg)" : "rotate(0)" }}>▼</span>
                     </button>
                     {showRawData && (
                       <div style={{ marginTop: 12, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: 16 }}>
@@ -1649,6 +1644,21 @@ function VitaView() {
                             <span style={{ background: "#f8fafc", color: "#94a3b8", padding: "4px 10px", borderRadius: 20, fontSize: 10 }}>Gemini 2.0 Flash</span>
                           </>}
                         </div>
+                        {/* Top 5 Market Opportunities */}
+                        {mo?.top5 && (
+                          <div style={{ marginBottom: 12 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>📊 Top 5 시장 기회 (Domination Score 순)</div>
+                            {mo.top5.map((cat, i) => (
+                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: i === 0 ? "#ecfdf5" : "#f8fafc", borderRadius: 8, marginBottom: 4, border: i === 0 ? "1px solid #a7f3d0" : "1px solid #e2e8f0" }}>
+                                <span style={{ fontSize: 14, fontWeight: 800, color: i === 0 ? "#059669" : "#64748b", minWidth: 24 }}>#{i + 1}</span>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", minWidth: 100 }}>{cat.category}</span>
+                                <span style={{ fontSize: 11, color: "#6366f1", fontWeight: 600 }}>Score: {cat.dominationScore}</span>
+                                <span style={{ fontSize: 11, color: "#64748b" }}>Brands: {cat.brandCount}</span>
+                                <span style={{ fontSize: 11, color: "#64748b" }}>Rev: ${(cat.monthlyRevenue || 0).toLocaleString()}/mo</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <pre style={{ background: "#0f172a", color: "#a7f3d0", borderRadius: 8, padding: 14, fontSize: 10, maxHeight: 400, overflow: "auto", whiteSpace: "pre-wrap" }}>
                           {JSON.stringify(formulatorResult, null, 2)}
                         </pre>

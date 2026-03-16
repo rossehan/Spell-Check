@@ -202,6 +202,25 @@ app.get('/api/categories', (req, res) => {
   })));
 });
 
+// Fetch multiple pages from SP-API for a single keyword (up to maxPages)
+async function spApiFetchPages(keyword, maxPages = 3) {
+  let allItems = [];
+  let pageToken = null;
+  let totalResults = 0;
+  for (let page = 0; page < maxPages; page++) {
+    let url = `/catalog/2022-04-01/items?keywords=${encodeURIComponent(keyword)}&marketplaceIds=${MARKETPLACE_ID}&includedData=summaries,attributes,salesRanks,images&pageSize=20`;
+    if (pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
+    const r = await spApiGet(url);
+    const items = r.data?.items || [];
+    allItems = allItems.concat(items);
+    totalResults = r.data?.numberOfResults || totalResults;
+    pageToken = r.data?.pagination?.nextToken;
+    if (!pageToken) break;
+    if (page < maxPages - 1) await new Promise(resolve => setTimeout(resolve, 300));
+  }
+  return { items: allItems, numberOfResults: totalResults };
+}
+
 // Batch helper: fetch in groups of BATCH_SIZE with delay between batches
 async function fetchInBatches(entries, batchSize = 10, delayMs = 1500) {
   const results = [];
@@ -209,8 +228,8 @@ async function fetchInBatches(entries, batchSize = 10, delayMs = 1500) {
     const batch = entries.slice(i, i + batchSize);
     const batchResults = await Promise.allSettled(
       batch.map(([id, keyword]) =>
-        spApiGet(`/catalog/2022-04-01/items?keywords=${encodeURIComponent(keyword)}&marketplaceIds=${MARKETPLACE_ID}&includedData=summaries,attributes,salesRanks,images`)
-          .then(r => ({ id, data: r.data }))
+        spApiFetchPages(keyword, 3)
+          .then(data => ({ id, data }))
       )
     );
     results.push(...batchResults);
@@ -1814,6 +1833,226 @@ const HEALTH_CONCERNS = {
   stress: { label: 'Stress & Mood', categories: ['ashwagandha', 'rhodiola', 'five_htp', 'l_theanine', 'magnesium', 'st_johns_wort', 'ginseng'], subreddits: ['supplements', 'anxiety', 'Biohackers', 'nootropics'] },
   muscle: { label: 'Muscle & Performance', categories: ['creatine', 'bcaa', 'glutamine', 'whey_protein', 'beta_alanine', 'citrulline', 'electrolytes', 'protein'], subreddits: ['supplements', 'Fitness', 'bodybuilding'] }
 };
+
+// ===== AUTO-RECOMMEND: AI picks the best opportunity from ALL data =====
+app.get('/api/ai-formulator/auto-recommend', async (req, res) => {
+  if (!trendsCache?.categories) {
+    return res.status(503).json({ error: 'Data not loaded yet. Please wait for initial data fetch.' });
+  }
+  if (!GEMINI_API_KEY) {
+    return res.json({ error: 'GEMINI_API_KEY not set', message: 'Gemini API 키가 필요합니다. .env 파일에 GEMINI_API_KEY=your_key를 추가해주세요.' });
+  }
+
+  try {
+    // 1. Calculate Domination Scores server-side (same logic as frontend)
+    const catEntries = Object.entries(trendsCache.categories);
+    const maxRev = Math.max(...catEntries.map(([,c]) => c.estimatedMonthlyRevenue || 0), 1);
+    const maxSpread = Math.max(...catEntries.map(([,c]) => c.priceSpread || 0), 1);
+
+    const scored = catEntries.map(([catId, c]) => {
+      const hhi = c.hhi || 0;
+      const topShare = c.topBrandShare || 0;
+      const brandCount = c.brandCount || Object.keys(c.brands || {}).length;
+      const totalProducts = c.totalProducts || 0;
+      const avgDailySales = c.avgDailySales || 0;
+      const revenue = c.estimatedMonthlyRevenue || 0;
+      const priceSpread = c.priceSpread || 0;
+      const avgPrice = c.avgPrice || 0;
+
+      const fragmentationScore = Math.min(100, Math.max(0, 100 - (hhi / 100)));
+      const weakLeaderScore = Math.min(100, Math.max(0, 100 - topShare * 2));
+      const maxDPP = Math.max(...catEntries.map(([,cc]) => {
+        const tp = cc.totalProducts || 1;
+        return (cc.avgDailySales || 0) / Math.log10(tp + 1);
+      }), 1);
+      const demandPerProduct = totalProducts > 0 ? avgDailySales / Math.log10(totalProducts + 1) : 0;
+      const supplyDemandScore = Math.round((demandPerProduct / maxDPP) * 100);
+      const revenueScore = Math.round((revenue / maxRev) * 100);
+      const priceGapScore = Math.round((priceSpread / maxSpread) * 100);
+
+      const dominationScore = Math.round(
+        fragmentationScore * 0.25 + weakLeaderScore * 0.15 +
+        supplyDemandScore * 0.15 + revenueScore * 0.15 +
+        priceGapScore * 0.15 + 50 * 0.15
+      );
+
+      const topBrandEntry = Object.entries(c.brands || {}).sort((a, b) => b[1].revenue - a[1].revenue)[0];
+      const brandEntries = Object.entries(c.brands || {}).sort((a, b) => b[1].revenue - a[1].revenue);
+      const top3Rev = brandEntries.slice(0, 3).reduce((s, [,b]) => s + b.revenue, 0);
+      const totalRev = brandEntries.reduce((s, [,b]) => s + b.revenue, 0);
+      const top3Share = totalRev > 0 ? Math.round((top3Rev / totalRev) * 100) : 0;
+
+      return {
+        catId, dominationScore, brandCount, totalProducts,
+        avgDailySales, revenue, avgPrice, priceSpread,
+        hhi, topShare, top3Share,
+        topBrand: topBrandEntry ? topBrandEntry[0] : 'N/A',
+        topProducts: (c.topProducts || []).slice(0, 5),
+        minPrice: c.minPrice || 0, maxPrice: c.maxPrice || 0,
+        brands: c.brands
+      };
+    }).sort((a, b) => b.dominationScore - a.dominationScore);
+
+    // 2. Pick top 5 opportunities
+    const top5 = scored.slice(0, 5);
+
+    // 3. Map each top category to its health concern
+    const categoryConcernMap = {};
+    for (const [concernKey, concernData] of Object.entries(HEALTH_CONCERNS)) {
+      for (const cat of concernData.categories) {
+        if (!categoryConcernMap[cat]) categoryConcernMap[cat] = [];
+        categoryConcernMap[cat].push({ key: concernKey, label: concernData.label });
+      }
+    }
+
+    // 4. Get Reddit data for the top category
+    let redditData = { topPosts: [] };
+    try {
+      const topCatName = top5[0].catId.replace(/_/g, ' ');
+      const result = await httpsGet('www.reddit.com',
+        `/search.json?q=${encodeURIComponent(topCatName + ' supplement')}&sort=relevance&t=month&limit=20`,
+        { 'User-Agent': 'VitaView/1.0 (supplement research)' }
+      );
+      const posts = (result.data?.data?.children || [])
+        .filter(p => !p.data?.stickied)
+        .map(p => ({ title: p.data.title, score: p.data.score }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 8);
+      redditData.topPosts = posts.map(p => `[Score:${p.score}] ${p.title}`);
+    } catch(e) { redditData.error = e.message; }
+
+    // 5. Get FDA data for top ingredients
+    let fdaData = [];
+    try {
+      for (const cat of top5.slice(0, 3)) {
+        const ingName = cat.catId.replace(/_/g, ' ');
+        try {
+          const aeRes = await httpsGet('api.fda.gov', `/food/event.json?search=products.name_brand:"${encodeURIComponent(ingName)}"&limit=1`, {});
+          fdaData.push({ ingredient: ingName, adverseEvents: aeRes.data?.meta?.results?.total || 0 });
+        } catch(e) { fdaData.push({ ingredient: ingName, adverseEvents: 0 }); }
+        await new Promise(r => setTimeout(r, 200));
+      }
+    } catch(e) {}
+
+    // 6. Build the ALL-IN-ONE context for Gemini
+    const top5Context = top5.map(cat => ({
+      category: cat.catId,
+      dominationScore: cat.dominationScore,
+      brandCount: cat.brandCount,
+      totalProducts: cat.totalProducts,
+      avgDailySales: cat.avgDailySales,
+      monthlyRevenue: cat.revenue,
+      avgPrice: cat.avgPrice,
+      priceRange: `$${cat.minPrice} ~ $${cat.maxPrice}`,
+      hhi: cat.hhi,
+      topBrand: `${cat.topBrand} (${cat.topShare}%)`,
+      top3Share: cat.top3Share,
+      healthConcerns: categoryConcernMap[cat.catId]?.map(c => c.label) || [],
+      topProducts: cat.topProducts.slice(0, 3).map(p => `${p.brand} - ${p.title} ($${p.price}, Rank #${p.rank})`)
+    }));
+
+    // 7. GEMINI PROMPT - Definitive Recommendation
+    const systemPrompt = `You are the world's #1 Amazon FBA supplement consultant and a certified pharmacist. You analyze real market data and make ONE definitive product recommendation. You don't ask questions - you give THE answer.
+
+IMPORTANT: Always respond in Korean (한국어). Follow the exact JSON schema. Be bold, data-driven, and decisive.`;
+
+    const userPrompt = `아래는 아마존 건기식 시장의 실시간 데이터야. 전체 ${scored.length}개 카테고리를 분석한 결과, 상위 5개 기회를 보여줄게.
+
+## TOP 5 시장 기회 (Domination Score 순):
+${JSON.stringify(top5Context, null, 2)}
+
+## Reddit 소비자 반응 (${top5[0].catId}):
+${JSON.stringify(redditData, null, 2)}
+
+## FDA 안전성 데이터:
+${JSON.stringify(fdaData, null, 2)}
+
+## 전체 시장 요약:
+- 분석 카테고리: ${scored.length}개
+- Easy Entry (70+): ${scored.filter(s => s.dominationScore >= 70).length}개
+- Medium Entry (50-69): ${scored.filter(s => s.dominationScore >= 50 && s.dominationScore < 70).length}개
+- Hard Entry (<50): ${scored.filter(s => s.dominationScore < 50).length}개
+
+## 미션: 딱 1개의 신제품을 추천해. "이 제품을 만들어라"는 확정 답변을 줘.
+
+반드시 아래 JSON으로 답변:
+{
+  "productName": "영어 브랜드 제품명 (예: VitaRest Sleep Complex)",
+  "productNameKr": "한국어 제품 설명 한 줄",
+  "formType": "제형 (리포조말 소프트젤, 구미, 분말스틱 등)",
+  "tagline": "아마존 상세페이지 첫 줄 영어 카피 (한 문장)",
+  "whyThisCategory": "왜 이 카테고리인지 데이터 근거 2-3문장 (Domination Score, 브랜드 수, 매출 등 수치 포함)",
+  "viralMomentumScore": 0에서100사이숫자,
+  "complaintsBreakdown": [
+    {"complaint": "불만 유형", "percentage": 퍼센트숫자, "source": "데이터 근거"}
+  ],
+  "fdaTrafficLight": "GREEN 또는 YELLOW 또는 RED",
+  "fdaOneLiner": "FDA 관련 주의사항 한 줄",
+  "ingredients": [
+    {"name": "성분명", "dosage": "용량", "reason": "배합 이유 한 줄"}
+  ],
+  "synergyOneLiner": "성분 배합 시너지 핵심 한 줄",
+  "competitorWeaknesses": [
+    {"weakness": "기존 약점", "ourFix": "우리 해결법", "impact": "HIGH/MEDIUM/LOW"}
+  ],
+  "pricingStrategy": {
+    "suggestedPrice": 가격숫자,
+    "targetCOGS": 원가숫자,
+    "monthlyProfit": 월순이익숫자,
+    "reasoning": "가격 전략 한 줄"
+  },
+  "sellingPoints": ["셀링포인트1", "셀링포인트2", "셀링포인트3"],
+  "amazonTitle": "아마존 상품 타이틀 영어 200자 이내",
+  "dominationReason": "독점 가능 핵심 이유 2-3문장",
+  "targetCategory": "추천 카테고리 ID (top5 중 하나)"
+}`;
+
+    // 8. Call Gemini
+    const geminiBody = JSON.stringify({
+      contents: [{ parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 4096, responseMimeType: "application/json" }
+    });
+
+    console.log('🤖 Auto-recommend: calling Gemini with top 5 opportunities...');
+    const geminiRes = await httpsPost(
+      'generativelanguage.googleapis.com',
+      `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      { 'Content-Type': 'application/json' },
+      geminiBody
+    );
+
+    if (geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      let aiResponse;
+      try {
+        aiResponse = JSON.parse(geminiRes.data.candidates[0].content.parts[0].text);
+      } catch(e) {
+        aiResponse = { rawText: geminiRes.data.candidates[0].content.parts[0].text };
+      }
+
+      res.json({
+        aiFormulation: aiResponse,
+        marketOverview: {
+          totalCategories: scored.length,
+          easyEntry: scored.filter(s => s.dominationScore >= 70).length,
+          moderateEntry: scored.filter(s => s.dominationScore >= 50 && s.dominationScore < 70).length,
+          hardEntry: scored.filter(s => s.dominationScore < 50).length,
+          top5: top5Context
+        },
+        dataSourcesSummary: {
+          spApiCategories: scored.length,
+          redditPosts: redditData.topPosts?.length || 0,
+          fdaIngredients: fdaData.length
+        },
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.json({ error: 'Gemini response error', details: geminiRes.data });
+    }
+  } catch(e) {
+    console.error('Auto-recommend error:', e.message);
+    res.status(500).json({ error: 'Auto-recommend failed: ' + e.message });
+  }
+});
 
 // Step 1: Data Aggregation Pipeline
 app.get('/api/ai-formulator/context', async (req, res) => {
