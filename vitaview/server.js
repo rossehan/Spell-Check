@@ -336,6 +336,35 @@ app.get('/api/debug', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Debug Amazon suggest
+app.get('/api/debug-amazon-suggest', async (req, res) => {
+  const q = req.query.q || 'vitamin supplement';
+  try {
+    const result = await httpsGet(
+      'completion.amazon.com',
+      `/search/complete?search-alias=aps&client=amazon-search-ui&mkt=1&q=${encodeURIComponent(q)}`,
+      {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/javascript, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'identity',
+        'Referer': 'https://www.amazon.com/',
+        'Origin': 'https://www.amazon.com'
+      }
+    );
+    res.json({
+      query: q,
+      httpStatus: result.status,
+      dataType: typeof result.data,
+      isArray: Array.isArray(result.data),
+      dataPreview: typeof result.data === 'string' ? result.data.slice(0, 500) : result.data,
+      suggestions: Array.isArray(result.data) ? result.data[1] : 'not_array'
+    });
+  } catch(e) {
+    res.json({ query: q, error: e.message });
+  }
+});
+
 // ──── KEYWORD INTELLIGENCE ────
 
 const STOP_WORDS = new Set([
@@ -1278,13 +1307,35 @@ app.get('/api/amazon-suggest', async (req, res) => {
     const result = await httpsGet(
       'completion.amazon.com',
       `/search/complete?search-alias=aps&client=amazon-search-ui&mkt=1&q=${encodeURIComponent(q)}`,
-      { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+      {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/javascript, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'identity',
+        'Referer': 'https://www.amazon.com/',
+        'Origin': 'https://www.amazon.com'
+      }
     );
-    const suggestions = Array.isArray(result.data) ? (result.data[1] || []) : [];
+    console.log(`Amazon suggest for "${q}": status=${result.status}, type=${typeof result.data}, isArray=${Array.isArray(result.data)}`);
+    let suggestions = [];
+    if (Array.isArray(result.data)) {
+      suggestions = result.data[1] || [];
+    } else if (typeof result.data === 'string') {
+      // Try parsing as JSON in case httpsGet didn't parse it
+      try {
+        const parsed = JSON.parse(result.data);
+        suggestions = Array.isArray(parsed) ? (parsed[1] || []) : [];
+      } catch(e) {
+        console.log(`Amazon suggest parse error for "${q}":`, result.data?.slice?.(0, 200));
+      }
+    }
     const response = { query: q, suggestions, timestamp: new Date().toISOString() };
-    amazonSuggestCache[cacheKey] = { data: response, time: Date.now() };
+    if (suggestions.length > 0) {
+      amazonSuggestCache[cacheKey] = { data: response, time: Date.now() };
+    }
     res.json(response);
   } catch(e) {
+    console.log(`Amazon suggest error for "${q}":`, e.message);
     res.json({ query: q, suggestions: [], error: e.message });
   }
 });
@@ -1337,10 +1388,23 @@ app.get('/api/longtail-keywords', async (req, res) => {
           const result = await httpsGet(
             'completion.amazon.com',
             `/search/complete?search-alias=aps&client=amazon-search-ui&mkt=1&q=${encodeURIComponent(seed)}`,
-            { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+            {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'application/json, text/javascript, */*',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Accept-Encoding': 'identity',
+              'Referer': 'https://www.amazon.com/',
+              'Origin': 'https://www.amazon.com'
+            }
           );
-          suggestions = Array.isArray(result.data) ? (result.data[1] || []) : [];
-          amazonSuggestCache[cacheKey] = { data: { query: seed, suggestions }, time: Date.now() };
+          if (Array.isArray(result.data)) {
+            suggestions = result.data[1] || [];
+          } else if (typeof result.data === 'string') {
+            try { const parsed = JSON.parse(result.data); suggestions = Array.isArray(parsed) ? (parsed[1] || []) : []; } catch(e) {}
+          }
+          if (suggestions.length > 0) {
+            amazonSuggestCache[cacheKey] = { data: { query: seed, suggestions }, time: Date.now() };
+          }
         } catch(e) {
           console.log(`Amazon suggest error for "${seed}":`, e.message);
         }
