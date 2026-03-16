@@ -60,6 +60,12 @@
 38. AI Recommendation Summary (dark theme) with immediate entry targets and high revenue targets
 39. Methodology explainer section
 
+40. Keyword Intelligence sub-tab: top keywords, compound keywords, cross-category trending ingredients, form trends, premium vs budget keywords
+41. Trend Analysis sub-tab: Google search trend keywords (via Autocomplete API), Google+Amazon overlap analysis, category trend momentum ranking
+42. Hashtag Discovery sub-tab: ingredient hashtags, Google trend hashtags, product form hashtags, lifestyle/marketing hashtags
+43. Domination Score enhanced: 6th factor "Trend Momentum" (15%) added using keyword intelligence + Google trends data
+44. AI Domination now has 4 sub-tabs: Domination Score, Keyword Intelligence, Trend Analysis, Hashtag Discovery
+
 ## SP-API Data Structure (CRITICAL - DO NOT FORGET)
 - **Price**: `list_price[0].value` is a direct NUMBER (e.g. 17.98), NOT `{amount: "xx.xx"}`
   - Use `extractPrice()` helper in server.js
@@ -90,6 +96,9 @@
 - GET `/api/products/:categoryId` - Products by category
 - GET `/api/categories` - List all categories
 - GET `/api/debug` - Debug SP-API response structure
+- GET `/api/keyword-intelligence` - Keyword analysis from product titles (requires trends cache)
+- GET `/api/google-suggest?q=keyword` - Google Autocomplete suggestions
+- GET `/api/trend-keywords` - Batch Google search trend keywords for supplements
 
 ## Category Keywords (100 categories)
 vitamins, protein, omega, probiotics, collagen, magnesium, vitaminD, vitaminC, zinc, iron, calcium, biotin, melatonin, ashwagandha, creatine, turmeric, elderberry, fiber, multivitamin, bcaa, glutamine, coq10, vitaminB, vitaminE, vitaminK, potassium, selenium, manganese, lysine, glucosamine, spirulina, chlorella, echinacea, ginseng, garlic, greenTea, appleCiderVinegar, maca, saw_palmetto, milk_thistle, rhodiola, valerian, fenugreek, black_seed_oil, quercetin, resveratrol, lions_mane, reishi, berberine, digestive_enzymes, lutein, astaxanthin, dhea, five_htp, l_theanine, l_carnitine, alpha_lipoic_acid, nac, dim, tribulus, tongkat_ali, shilajit, cordyceps, chaga, turkey_tail, moringa, sea_moss, olive_leaf, oregano_oil, vitamin_a, folate, chromium, iodine, boron, copper, inositol, pqq, nmn, hyaluronic_acid, keratin, msm, chondroitin, bromelain, psyllium_husk, bovine_colostrum, beta_alanine, citrulline, electrolytes, whey_protein, casein, pea_protein, hemp_protein, fish_oil, krill_oil, evening_primrose, black_cohosh, st_johns_wort, bilberry
