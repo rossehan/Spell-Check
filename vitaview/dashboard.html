@@ -331,6 +331,11 @@ function VitaView() {
   const [googleTrendsLoading, setGoogleTrendsLoading] = useState(false);
   const [aiDomSubTab, setAiDomSubTab] = useState("domination");
 
+  // Module 1: Amazon Long-tail Keywords
+  const [longtailData, setLongtailData] = useState(null);
+  const [longtailLoading, setLongtailLoading] = useState(false);
+  const [longtailCategory, setLongtailCategory] = useState("");
+
   // Market Intelligence states
   const [miSubTab, setMiSubTab] = useState("overview");
   const [miYoutube, setMiYoutube] = useState(null);
@@ -379,7 +384,13 @@ function VitaView() {
         .then(r => r.json()).then(d => { if (d.trendingKeywords) setGoogleTrends(d); })
         .catch(() => {}).finally(() => setGoogleTrendsLoading(false));
     }
-  }, [activeTab, activeCategory, trends]);
+    if (activeTab === "aiAnalysis" && aiDomSubTab === "longtail" && !longtailData && !longtailLoading) {
+      setLongtailLoading(true);
+      fetch(`${API_BASE}/api/longtail-keywords`)
+        .then(r => r.json()).then(d => { if (d.keywords) setLongtailData(d); })
+        .catch(() => {}).finally(() => setLongtailLoading(false));
+    }
+  }, [activeTab, activeCategory, trends, aiDomSubTab]);
 
   // Market Intelligence data loading
   useEffect(() => {
@@ -1794,7 +1805,8 @@ function VitaView() {
                 ["domination", "\u{1F3AF} Domination Score"],
                 ["keywords", "\u{1F50D} Keyword Intelligence"],
                 ["trends", "\u{1F4C8} Trend Analysis"],
-                ["hashtags", "#\uFE0F\u20E3 Hashtag Discovery"]
+                ["hashtags", "#\uFE0F\u20E3 Hashtag Discovery"],
+                ["longtail", "\u{1F50E} Longtail Keywords"]
               ].map(([id, label]) => (
                 <button key={id} onClick={() => setAiDomSubTab(id)} style={{
                   background: aiDomSubTab === id ? "linear-gradient(135deg, #10b981, #3b82f6)" : "#fff",
@@ -2687,6 +2699,111 @@ function VitaView() {
             )}
             </>
             )}
+
+            {/* MODULE 1: LONGTAIL KEYWORDS SUB-TAB */}
+            {aiDomSubTab === "longtail" && (
+              <div>
+                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{"\u{1F50E}"} Amazon Long-tail Keyword Extractor</h3>
+                  <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>SP-API 카테고리 데이터 기반 아마존 자동완성 롱테일 키워드 발굴</p>
+
+                  {/* Category filter */}
+                  <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center", flexWrap: "wrap" }}>
+                    <select value={longtailCategory} onChange={e => setLongtailCategory(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, minWidth: 200 }}>
+                      <option value="">All Categories (Top 20)</option>
+                      {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                    </select>
+                    <button onClick={() => {
+                      setLongtailData(null);
+                      setLongtailLoading(true);
+                      const url = longtailCategory
+                        ? `${API_BASE}/api/longtail-keywords?category=${longtailCategory}`
+                        : `${API_BASE}/api/longtail-keywords`;
+                      fetch(url)
+                        .then(r => r.json()).then(d => { if (d.keywords) setLongtailData(d); })
+                        .catch(() => {}).finally(() => setLongtailLoading(false));
+                    }} style={{ background: "linear-gradient(135deg, #10b981, #3b82f6)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                      {longtailLoading ? "Loading..." : "\u{1F504} Fetch Keywords"}
+                    </button>
+                    {longtailData && (
+                      <span style={{ fontSize: 12, color: "#94a3b8" }}>
+                        {longtailData.totalCategories} categories | Updated: {new Date(longtailData.timestamp).toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {longtailLoading && (
+                  <div style={{ textAlign: "center", padding: 60 }}>
+                    <div style={{ width: 40, height: 40, border: "3px solid rgba(16,185,129,0.2)", borderTopColor: "#10b981", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+                    <div style={{ color: "#64748b" }}>Fetching Amazon autocomplete data... (rate-limited, may take a moment)</div>
+                  </div>
+                )}
+
+                {longtailData && !longtailLoading && Object.entries(longtailData.keywords || {}).map(([catId, catData]) => (
+                  <div key={catId} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                      <div>
+                        <h4 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", textTransform: "capitalize" }}>
+                          {(CATEGORIES.find(c => c.id === catId) || {}).icon || "\u{1F4E6}"} {catData.categoryName}
+                        </h4>
+                        <span style={{ fontSize: 11, color: "#94a3b8" }}>Seeds: {catData.seedKeywords?.join(", ")}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <span style={{ background: "#ecfdf5", color: "#059669", padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
+                          {catData.totalFound} keywords
+                        </span>
+                        <span style={{ background: "#eef2ff", color: "#6366f1", padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
+                          {catData.longTailCount} long-tail (3+ words)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Long-tail keywords table */}
+                    <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                        <thead>
+                          <tr style={{ background: "#f8fafc", position: "sticky", top: 0 }}>
+                            <th style={{ padding: "8px 10px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>#</th>
+                            <th style={{ padding: "8px 10px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Keyword</th>
+                            <th style={{ padding: "8px 10px", textAlign: "center", color: "#64748b", fontWeight: 600 }}>Words</th>
+                            <th style={{ padding: "8px 10px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Seed</th>
+                            <th style={{ padding: "8px 10px", textAlign: "center", color: "#64748b", fontWeight: 600 }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {catData.longtailKeywords?.map((kw, i) => (
+                            <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                              <td style={{ padding: "8px 10px", color: "#94a3b8" }}>{i + 1}</td>
+                              <td style={{ padding: "8px 10px", fontWeight: kw.isLongTail ? 600 : 400, color: kw.isLongTail ? "#0f172a" : "#64748b" }}>
+                                {kw.isLongTail && <span style={{ color: "#10b981", marginRight: 4 }}>{"\u2605"}</span>}
+                                {kw.keyword}
+                              </td>
+                              <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                                <span style={{ background: kw.wordCount >= 4 ? "#dcfce7" : kw.wordCount >= 3 ? "#e0f2fe" : "#f1f5f9", color: kw.wordCount >= 4 ? "#16a34a" : kw.wordCount >= 3 ? "#2563eb" : "#94a3b8", padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600 }}>
+                                  {kw.wordCount}
+                                </span>
+                              </td>
+                              <td style={{ padding: "8px 10px", color: "#94a3b8", fontSize: 11 }}>{kw.seed}</td>
+                              <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                                <a href={`https://www.amazon.com/s?k=${encodeURIComponent(kw.keyword)}`} target="_blank" rel="noopener noreferrer" style={{ color: "#f59e0b", textDecoration: "none", fontSize: 16 }} title="Search on Amazon">{"\u{1F50D}"}</a>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+
+                {longtailData && Object.keys(longtailData.keywords || {}).length === 0 && (
+                  <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
+                    <p>No keywords found. Make sure trends data is loaded first.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
         )}
 

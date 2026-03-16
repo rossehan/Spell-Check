@@ -1261,6 +1261,121 @@ async function fetchTrendsData() {
   return { categories: results, timestamp: new Date().toISOString() };
 }
 
+// ===== MODULE 1: Amazon Long-tail Keyword Extractor =====
+let amazonSuggestCache = {};
+const AMAZON_SUGGEST_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+app.get('/api/amazon-suggest', async (req, res) => {
+  const q = (req.query.q || '').trim().toLowerCase();
+  if (!q) return res.json({ query: q, suggestions: [] });
+
+  const cacheKey = q;
+  if (amazonSuggestCache[cacheKey] && Date.now() - amazonSuggestCache[cacheKey].time < AMAZON_SUGGEST_CACHE_TTL) {
+    return res.json(amazonSuggestCache[cacheKey].data);
+  }
+
+  try {
+    const result = await httpsGet(
+      'completion.amazon.com',
+      `/search/complete?search-alias=aps&client=amazon-search-ui&mkt=1&q=${encodeURIComponent(q)}`,
+      { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    );
+    const suggestions = Array.isArray(result.data) ? (result.data[1] || []) : [];
+    const response = { query: q, suggestions, timestamp: new Date().toISOString() };
+    amazonSuggestCache[cacheKey] = { data: response, time: Date.now() };
+    res.json(response);
+  } catch(e) {
+    res.json({ query: q, suggestions: [], error: e.message });
+  }
+});
+
+app.get('/api/longtail-keywords', async (req, res) => {
+  // Use trendsCache to get main keywords from SP-API categories
+  if (!trendsCache) {
+    return res.json({ error: 'Trends data not loaded yet. Please wait for initial data fetch.', keywords: {} });
+  }
+
+  const requestedCategory = req.query.category; // optional: specific category
+  const categories = trendsCache.categories || {};
+  const categoryIds = requestedCategory ? [requestedCategory] : Object.keys(categories).slice(0, 20); // limit to 20 at a time
+
+  const results = {};
+  for (const catId of categoryIds) {
+    const catData = categories[catId];
+    if (!catData) continue;
+
+    // Build seed keywords from category name + top product titles
+    const seedKeywords = [];
+    // Category name itself (convert id to search term)
+    const catName = catId.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim().toLowerCase();
+    seedKeywords.push(catName + ' supplement');
+
+    // Extract top brand keywords
+    if (catData.topProducts?.length > 0) {
+      // Get unique meaningful words from top 3 product titles
+      const topTitles = catData.topProducts.slice(0, 3).map(p => p.title || '');
+      const commonWords = new Set(['the','a','an','and','or','for','with','in','of','to','by','is','mg','ct','count','pack','capsules','tablets','softgels','gummies','supplement','supply','day','days','month','serving','servings','size','made','usa','non','gmo','free','gluten','vegan','organic','natural','premium','best']);
+      const titleWords = topTitles.join(' ').toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3 && !commonWords.has(w));
+      const wordFreq = {};
+      titleWords.forEach(w => { wordFreq[w] = (wordFreq[w] || 0) + 1; });
+      const topWords = Object.entries(wordFreq).sort((a, b) => b[1] - a[1]).slice(0, 3).map(e => e[0]);
+      topWords.forEach(w => {
+        if (w !== catName) seedKeywords.push(w + ' supplement');
+      });
+    }
+
+    // Fetch Amazon autocomplete for each seed keyword
+    const longtailKeywords = [];
+    for (const seed of seedKeywords.slice(0, 4)) { // max 4 seeds per category
+      const cacheKey = seed;
+      let suggestions = [];
+
+      if (amazonSuggestCache[cacheKey] && Date.now() - amazonSuggestCache[cacheKey].time < AMAZON_SUGGEST_CACHE_TTL) {
+        suggestions = amazonSuggestCache[cacheKey].data.suggestions || [];
+      } else {
+        try {
+          const result = await httpsGet(
+            'completion.amazon.com',
+            `/search/complete?search-alias=aps&client=amazon-search-ui&mkt=1&q=${encodeURIComponent(seed)}`,
+            { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+          );
+          suggestions = Array.isArray(result.data) ? (result.data[1] || []) : [];
+          amazonSuggestCache[cacheKey] = { data: { query: seed, suggestions }, time: Date.now() };
+        } catch(e) {
+          console.log(`Amazon suggest error for "${seed}":`, e.message);
+        }
+        // Rate limit: 500ms between requests
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      suggestions.forEach(s => {
+        if (!longtailKeywords.find(k => k.keyword === s)) {
+          longtailKeywords.push({
+            keyword: s,
+            seed,
+            wordCount: s.split(/\s+/).length,
+            isLongTail: s.split(/\s+/).length >= 3
+          });
+        }
+      });
+    }
+
+    results[catId] = {
+      categoryName: catName,
+      seedKeywords,
+      longtailKeywords: longtailKeywords.sort((a, b) => b.wordCount - a.wordCount),
+      totalFound: longtailKeywords.length,
+      longTailCount: longtailKeywords.filter(k => k.isLongTail).length
+    };
+  }
+
+  res.json({
+    keywords: results,
+    totalCategories: Object.keys(results).length,
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 VitaView Backend running on http://localhost:${PORT}`);
   console.log(`📋 Mode: LIVE (SP-API direct HTTP)`);
