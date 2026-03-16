@@ -1691,16 +1691,39 @@ function VitaView() {
                       <div style={{ fontSize: 18, fontWeight: 800 }}>{md.relevantCategories || ''}개 카테고리 분석 {"\u2192"} 3개 제품 추천</div>
                       {mkt.bestOpportunity && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{mkt.bestOpportunity}</div>}
                     </div>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <div style={{ background: "rgba(99,102,241,0.2)", borderRadius: 10, padding: "10px 16px", textAlign: "center" }}>
                         <div style={{ fontSize: 18, fontWeight: 800, color: "#a5b4fc" }}>${(md.totalAnnualMarket || 0).toLocaleString()}</div>
                         <div style={{ fontSize: 9, color: "#94a3b8" }}>연간 시장규모</div>
                       </div>
+                      {/* Opportunity Score 요약 배지 */}
+                      {md.categories && md.categories[0]?.opportunityScore != null && (
+                        <div style={{ background: md.categories[0].opportunityScore >= 80 ? "rgba(16,185,129,0.2)" : md.categories[0].opportunityScore >= 60 ? "rgba(245,158,11,0.2)" : "rgba(239,68,68,0.2)", borderRadius: 10, padding: "10px 16px", textAlign: "center" }}>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: md.categories[0].opportunityScore >= 80 ? "#6ee7b7" : md.categories[0].opportunityScore >= 60 ? "#fcd34d" : "#fca5a5" }}>
+                            {md.categories[0].opportunityScore}점
+                          </div>
+                          <div style={{ fontSize: 9, color: "#94a3b8" }}>기회 점수 (1위)</div>
+                        </div>
+                      )}
                       <button onClick={() => { setFormulatorResult(null); }} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "8px 14px", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer", alignSelf: "center" }}>
                         {"\u{1F519}"} 다시 설정
                       </button>
                     </div>
                   </div>
+
+                  {/* 진입 불가 카테고리 경고 */}
+                  {formulatorResult.blockedCategories && formulatorResult.blockedCategories.length > 0 && (
+                    <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#991b1b", marginBottom: 6 }}>{"\u26D4"} 진입 불가로 필터된 카테고리</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {formulatorResult.blockedCategories.map((bc, i) => (
+                          <span key={i} style={{ background: "#fee2e2", color: "#dc2626", padding: "4px 10px", borderRadius: 12, fontSize: 10, fontWeight: 600 }}>
+                            {bc.catId}: {bc.blockedReasons[0]}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* ═══ 3 Product Cards (Tab Selector) ═══ */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
@@ -1722,13 +1745,26 @@ function VitaView() {
                           </div>
                           <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", marginBottom: 4, lineHeight: 1.3 }}>{rec.productName}</div>
                           <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>{rec.productNameKr}</div>
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                             <span style={{ fontSize: 18, fontWeight: 800, color: sColor }}>${rec.pricingStrategy?.suggestedPrice}</span>
                             {rec.pricingStrategy && <span style={{ fontSize: 11, color: "#059669", fontWeight: 600, alignSelf: "center" }}>마진 {rec.pricingStrategy.marginPercent}%</span>}
                           </div>
                           {rec.roiProjection && (
                             <div style={{ fontSize: 10, color: "#64748b", marginTop: 6 }}>월순이익 ${(rec.roiProjection.monthlyProfit || 0).toLocaleString()}</div>
                           )}
+                          {/* Opportunity Score 배지 - 해당 카테고리 매칭 */}
+                          {(() => {
+                            const catMatch = md.categories?.find(c => c.category === rec.targetCategory);
+                            if (!catMatch || catMatch.opportunityScore == null) return null;
+                            const os = catMatch.opportunityScore;
+                            const oColor = os >= 80 ? "#10b981" : os >= 60 ? "#f59e0b" : "#ef4444";
+                            const oLabel = os >= 80 ? "\u{1F7E2}" : os >= 60 ? "\u{1F7E1}" : "\u{1F534}";
+                            return (
+                              <div style={{ marginTop: 6, fontSize: 10, fontWeight: 700, color: oColor, display: "flex", alignItems: "center", gap: 4 }}>
+                                {oLabel} 기회점수 {os}점
+                              </div>
+                            );
+                          })()}
                         </button>
                       );
                     })}
@@ -1756,8 +1792,22 @@ function VitaView() {
                               </div>
                             )}
                           </div>
-                          {/* FDA + Risk Badge */}
+                          {/* FDA + Risk + Opportunity Score Badge */}
                           <div style={{ display: "flex", gap: 8 }}>
+                            {/* Opportunity Score Badge */}
+                            {(() => {
+                              const catMatch = md.categories?.find(c => c.category === sel.targetCategory);
+                              if (!catMatch || catMatch.opportunityScore == null) return null;
+                              const os = catMatch.opportunityScore;
+                              const bgCol = os >= 80 ? "#ecfdf5" : os >= 60 ? "#fffbeb" : "#fef2f2";
+                              const txtCol = os >= 80 ? "#059669" : os >= 60 ? "#d97706" : "#dc2626";
+                              return (
+                                <div style={{ background: bgCol, borderRadius: 10, padding: "10px 14px", textAlign: "center", minWidth: 60 }}>
+                                  <div style={{ fontSize: 20, fontWeight: 800, color: txtCol }}>{os}</div>
+                                  <div style={{ fontSize: 9, fontWeight: 700, color: txtCol }}>기회점수</div>
+                                </div>
+                              );
+                            })()}
                             <div style={{ background: sel.fdaTrafficLight === "GREEN" ? "#ecfdf5" : sel.fdaTrafficLight === "YELLOW" ? "#fffbeb" : "#fef2f2", borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
                               <div style={{ width: 16, height: 16, borderRadius: "50%", background: sel.fdaTrafficLight === "GREEN" ? "#10b981" : sel.fdaTrafficLight === "YELLOW" ? "#f59e0b" : "#ef4444", margin: "0 auto 4px" }} />
                               <div style={{ fontSize: 9, fontWeight: 700 }}>FDA {sel.fdaTrafficLight}</div>
@@ -1834,6 +1884,67 @@ function VitaView() {
                           )}
                         </div>
                       </div>
+
+                      {/* ═══ Opportunity Score Breakdown ═══ */}
+                      {(() => {
+                        const catMatch = md.categories?.find(c => c.category === sel.targetCategory);
+                        if (!catMatch || !catMatch.scoreBreakdown) return null;
+                        const sb = catMatch.scoreBreakdown;
+                        const entries = [
+                          { key: 'marketAccessibility', label: '시장 접근성', icon: '\u{1F30D}', color: '#6366f1', max: 30 },
+                          { key: 'consumerDissatisfaction', label: '소비자 불만 (개선 기회)', icon: '\u{1F4AC}', color: '#ef4444', max: 25 },
+                          { key: 'trendMomentum', label: '트렌드 모멘텀', icon: '\u{1F4C8}', color: '#10b981', max: 20 },
+                          { key: 'entryBarrier', label: '진입 장벽', icon: '\u{1F512}', color: '#f59e0b', max: 15 },
+                          { key: 'demandSignal', label: '수요 시그널', icon: '\u{1F4E1}', color: '#3b82f6', max: 10 }
+                        ];
+                        return (
+                          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, marginBottom: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                              <h4 style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{"\u{1F3AF}"} Opportunity Score 상세</h4>
+                              <div style={{ fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
+                                background: catMatch.opportunityScore >= 80 ? "#ecfdf5" : catMatch.opportunityScore >= 60 ? "#fffbeb" : "#fef2f2",
+                                color: catMatch.opportunityScore >= 80 ? "#059669" : catMatch.opportunityScore >= 60 ? "#d97706" : "#dc2626"
+                              }}>
+                                {catMatch.verdict}
+                              </div>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 8 }}>
+                              {entries.map(e => {
+                                const data = sb[e.key];
+                                if (!data) return null;
+                                const pct = data.available ? Math.round((data.score / data.maxScore) * 100) : 0;
+                                return (
+                                  <div key={e.key} style={{ background: "#f8fafc", borderRadius: 10, padding: "12px 10px", textAlign: "center", border: "1px solid #e2e8f0" }}>
+                                    <div style={{ fontSize: 18, marginBottom: 4 }}>{e.icon}</div>
+                                    <div style={{ fontSize: 9, fontWeight: 600, color: "#64748b", marginBottom: 6, minHeight: 24 }}>{e.label}</div>
+                                    {data.available ? (
+                                      <div>
+                                        <div style={{ fontSize: 20, fontWeight: 800, color: e.color }}>{data.score}</div>
+                                        <div style={{ fontSize: 9, color: "#94a3b8" }}>/ {data.maxScore}점</div>
+                                        <div style={{ width: "100%", height: 4, background: "#e2e8f0", borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
+                                          <div style={{ height: "100%", background: e.color, borderRadius: 2, width: pct + "%" }} />
+                                        </div>
+                                        <div style={{ fontSize: 8, color: "#94a3b8", marginTop: 4, lineHeight: 1.3 }}>{data.reason}</div>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <div style={{ fontSize: 14, color: "#cbd5e1" }}>-</div>
+                                        <div style={{ fontSize: 8, color: "#cbd5e1", marginTop: 4 }}>데이터 없음</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {/* BSR 변동폭 보조 지표 */}
+                            {sb.bsrVolatility && sb.bsrVolatility.dataPoints > 1 && (
+                              <div style={{ marginTop: 10, background: "#fffbeb", borderRadius: 8, padding: "8px 12px", fontSize: 10, color: "#92400e", display: "flex", alignItems: "center", gap: 6 }}>
+                                <span>{"\u{1F4CA}"}</span> BSR 변동: {sb.bsrVolatility.reason} (보너스 +{sb.bsrVolatility.bonus}점)
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* ═══ MARKET PIE & ROI CALCULATOR ═══ */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
@@ -1980,18 +2091,85 @@ function VitaView() {
                                 <span style={{ background: "#ecfdf5", color: "#059669", padding: "4px 10px", borderRadius: 20, fontSize: 10, fontWeight: 600 }}>FDA: {formulatorResult.dataSourcesSummary.fdaIngredients} ingredients</span>
                               </>}
                             </div>
+                            {/* ═══ 카테고리별 Opportunity Score 테이블 ═══ */}
                             {md.categories && (
-                              <div style={{ marginBottom: 12 }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{"\u{1F4CA}"} 분석된 카테고리 (Domination Score 순)</div>
-                                {md.categories.slice(0, 8).map((cat, i) => (
-                                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 12px", background: i === 0 ? "#ecfdf5" : "#f8fafc", borderRadius: 8, marginBottom: 3, border: i === 0 ? "1px solid #a7f3d0" : "1px solid #e2e8f0", fontSize: 11 }}>
-                                    <span style={{ fontWeight: 800, color: i === 0 ? "#059669" : "#64748b", minWidth: 22 }}>#{i+1}</span>
-                                    <span style={{ fontWeight: 700, color: "#0f172a", minWidth: 90 }}>{cat.category}</span>
-                                    <span style={{ color: "#6366f1", fontWeight: 600 }}>Score:{cat.dominationScore}</span>
-                                    <span style={{ color: "#64748b" }}>Brands:{cat.brandCount}</span>
-                                    <span style={{ color: "#64748b" }}>Rev:${(cat.monthlyRevenue||0).toLocaleString()}/mo</span>
+                              <div style={{ marginBottom: 16 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>{"\u{1F3AF}"} 카테고리별 Opportunity Score 분석</div>
+                                {/* 테이블 헤더 */}
+                                <div style={{ display: "grid", gridTemplateColumns: "30px 100px 70px 50px 1fr 80px 80px", gap: 4, padding: "6px 12px", background: "#0f172a", borderRadius: "8px 8px 0 0", color: "#94a3b8", fontSize: 9, fontWeight: 700, alignItems: "center" }}>
+                                  <span>#</span><span>카테고리</span><span>기회점수</span><span>HHI</span><span>판정</span><span>브랜드</span><span>월매출</span>
+                                </div>
+                                {md.categories.map((cat, i) => {
+                                  const os = cat.opportunityScore ?? cat.dominationScore;
+                                  const osColor = os >= 80 ? "#10b981" : os >= 60 ? "#f59e0b" : "#ef4444";
+                                  const osBg = os >= 80 ? "#ecfdf5" : os >= 60 ? "#fffbeb" : "#fef2f2";
+                                  const verdict = cat.verdict || (os >= 80 ? '\u{1F7E2} 즉시 진입' : os >= 60 ? '\u{1F7E1} 재검토' : '\u{1F534} 비추천');
+                                  return (
+                                    <div key={i} style={{ display: "grid", gridTemplateColumns: "30px 100px 70px 50px 1fr 80px 80px", gap: 4, padding: "8px 12px", background: i % 2 === 0 ? "#fff" : "#f8fafc", border: "1px solid #e2e8f0", borderTop: "none", fontSize: 11, alignItems: "center", ...(i === md.categories.length - 1 ? { borderRadius: "0 0 8px 8px" } : {}) }}>
+                                      <span style={{ fontWeight: 800, color: i === 0 ? "#059669" : "#64748b" }}>#{i+1}</span>
+                                      <span style={{ fontWeight: 700, color: "#0f172a", fontSize: 10 }}>{cat.category.replace(/_/g, ' ')}</span>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                        <div style={{ width: 32, height: 6, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
+                                          <div style={{ height: "100%", background: osColor, borderRadius: 3, width: os + "%" }} />
+                                        </div>
+                                        <span style={{ fontWeight: 800, color: osColor, fontSize: 12 }}>{os}</span>
+                                      </div>
+                                      <span style={{ fontSize: 9, color: cat.hhi > 2500 ? "#dc2626" : cat.hhi > 1800 ? "#f59e0b" : "#64748b", fontWeight: cat.hhi > 2500 ? 700 : 400 }}>{cat.hhi}</span>
+                                      <span style={{ fontSize: 9, color: osColor, fontWeight: 600 }}>{verdict}</span>
+                                      <span style={{ fontSize: 10, color: "#64748b" }}>{cat.brandCount}개</span>
+                                      <span style={{ fontSize: 10, color: "#059669", fontWeight: 600 }}>${(cat.monthlyRevenue||0).toLocaleString()}</span>
+                                    </div>
+                                  );
+                                })}
+                                {/* Score Breakdown 상세 (있는 경우) */}
+                                {md.categories.filter(c => c.scoreBreakdown).length > 0 && (
+                                  <div style={{ marginTop: 12 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{"\u{1F4CA}"} 상위 카테고리 점수 상세</div>
+                                    {md.categories.filter(c => c.scoreBreakdown).slice(0, 3).map((cat, i) => {
+                                      const sb = cat.scoreBreakdown;
+                                      const items = [
+                                        { key: 'marketAccessibility', label: '시장접근', color: '#6366f1' },
+                                        { key: 'consumerDissatisfaction', label: '불만기회', color: '#ef4444' },
+                                        { key: 'trendMomentum', label: '트렌드', color: '#10b981' },
+                                        { key: 'entryBarrier', label: '진입장벽', color: '#f59e0b' },
+                                        { key: 'demandSignal', label: '수요', color: '#3b82f6' }
+                                      ];
+                                      return (
+                                        <div key={i} style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 14px", marginBottom: 6, border: "1px solid #e2e8f0" }}>
+                                          <div style={{ fontSize: 11, fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>
+                                            {cat.category.replace(/_/g, ' ')} - {cat.opportunityScore ?? cat.dominationScore}점
+                                          </div>
+                                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                            {items.map(item => {
+                                              const d = sb[item.key];
+                                              if (!d) return null;
+                                              return (
+                                                <div key={item.key} style={{ fontSize: 9, display: "flex", alignItems: "center", gap: 3 }}>
+                                                  <span style={{ color: item.color, fontWeight: 700 }}>{item.label}</span>
+                                                  <span style={{ fontWeight: 800, color: d.available ? item.color : "#cbd5e1" }}>{d.available ? d.score : '-'}</span>
+                                                  <span style={{ color: "#94a3b8" }}>/{d.maxScore}</span>
+                                                  {d.available && d.reason && <span style={{ color: "#94a3b8", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>({d.reason})</span>}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                ))}
+                                )}
+                                {/* 진입 불가 카테고리 상세 */}
+                                {formulatorResult.blockedCategories && formulatorResult.blockedCategories.length > 0 && (
+                                  <div style={{ marginTop: 12 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", marginBottom: 6 }}>{"\u26D4"} 진입 불가 카테고리 ({formulatorResult.blockedCategories.length}개)</div>
+                                    {formulatorResult.blockedCategories.map((bc, i) => (
+                                      <div key={i} style={{ background: "#fef2f2", borderRadius: 6, padding: "6px 10px", marginBottom: 3, fontSize: 10, color: "#991b1b", display: "flex", gap: 8 }}>
+                                        <span style={{ fontWeight: 700 }}>{bc.catId}</span>
+                                        <span>{bc.blockedReasons.join(' | ')}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             )}
                             <pre style={{ background: "#0f172a", color: "#a7f3d0", borderRadius: 8, padding: 14, fontSize: 10, maxHeight: 400, overflow: "auto", whiteSpace: "pre-wrap" }}>
