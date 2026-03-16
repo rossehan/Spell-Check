@@ -2075,58 +2075,52 @@ app.get('/api/ai-formulator/generate', async (req, res) => {
   }
 
   // Build the formulator prompt
-  const systemPrompt = `You are a top Amazon FBA seller and a certified supplement formulator/pharmacist. You specialize in creating innovative dietary supplement products that dominate the Amazon marketplace.
+  const systemPrompt = `You are a top Amazon FBA seller and a certified supplement formulator/pharmacist. You analyze real market data and produce actionable product plans.
 
-IMPORTANT: Always respond in Korean (한국어). Your response must follow the exact JSON format specified.`;
+IMPORTANT: Always respond in Korean (한국어). Follow the exact JSON schema. Be concise and data-driven.`;
 
-  const userPrompt = `아래의 실시간 시장 데이터를 분석해서 아마존을 독점할 수 있는 혁신적인 영양제 신제품 기획안을 딱 1개 제안해.
+  const userPrompt = `아래 실시간 데이터를 분석해서 아마존 독점 가능한 건기식 신제품 기획안을 1개 제안해.
 
 ## 분석 대상: ${contextData.concernLabel}
 
-## 실시간 데이터:
-### 아마존 시장 데이터 (SP-API):
+## 데이터:
+### 아마존 SP-API:
 ${JSON.stringify(contextData.spApiData, null, 2)}
-
-### Reddit 소비자 트렌드:
+### Reddit:
 ${JSON.stringify(contextData.redditData, null, 2)}
-
-### FDA 안전성 데이터:
+### FDA:
 ${JSON.stringify(contextData.fdaData, null, 2)}
-
-### 마진 분석 (1/3 법칙):
+### 마진:
 ${JSON.stringify(contextData.marginData, null, 2)}
 
-## 반드시 아래 JSON 형식으로 답변해:
+## 반드시 아래 JSON으로 답변:
 {
-  "productName": "제품명 (영어, 브랜드네임 느낌으로)",
-  "productNameKr": "제품명 한국어 설명",
-  "formType": "제형 (예: 리포조말 소프트젤, 구미, 분말 스틱 등)",
-  "tagline": "상세페이지 첫 줄에 들어갈 영어 카피라이팅 (한 줄)",
-  "targetAudience": "핵심 타겟 고객층 설명",
+  "productName": "영어 브랜드 제품명",
+  "productNameKr": "한국어 제품 설명 (한 줄)",
+  "formType": "제형 (구미, 리포조말 소프트젤, 분말스틱 등)",
+  "tagline": "아마존 상세페이지 첫 줄 영어 카피 (한 문장)",
+  "viralMomentumScore": 0에서100사이숫자(Reddit언급량+트렌드+관심도 종합),
+  "complaintsBreakdown": [
+    {"complaint": "불만 유형 (예: 알약 크기)", "percentage": 퍼센트숫자, "source": "데이터 근거"}
+  ],
+  "fdaTrafficLight": "GREEN 또는 YELLOW 또는 RED",
+  "fdaOneLiner": "FDA 관련 주의사항 딱 한 줄",
   "ingredients": [
-    {"name": "성분명", "dosage": "용량", "reason": "이 성분을 넣는 이유 (데이터 근거 포함)"}
+    {"name": "성분명", "dosage": "용량", "reason": "배합 이유 (한 줄)"}
   ],
-  "synergyExplanation": "성분 배합 시너지 설명 (왜 이 조합이 효과적인지)",
+  "synergyOneLiner": "성분 배합 시너지 핵심 한 줄",
   "competitorWeaknesses": [
-    {"weakness": "기존 제품 약점", "ourSolution": "우리 제품이 해결하는 방법"}
+    {"weakness": "기존 약점", "ourFix": "우리 해결법", "impact": "HIGH/MEDIUM/LOW"}
   ],
-  "fdaSafetyReport": {
-    "riskLevel": "LOW/MEDIUM/HIGH",
-    "warnings": ["주의사항 1", "주의사항 2"],
-    "marketingDontSay": ["절대 쓰면 안 되는 마케팅 문구"],
-    "marketingCanSay": ["안전하게 쓸 수 있는 마케팅 문구"]
-  },
   "pricingStrategy": {
-    "suggestedPrice": 가격숫자,
-    "targetCOGS": 원가숫자,
-    "estimatedMonthlyProfit": 월순이익숫자,
-    "reasoning": "가격 전략 이유"
+    "suggestedPrice": 가격,
+    "targetCOGS": 원가,
+    "monthlyProfit": 월순이익,
+    "reasoning": "가격 전략 한 줄"
   },
-  "marketingCopy": {
-    "title": "아마존 상품 타이틀 (200자 이내 영어)",
-    "bulletPoints": ["불릿포인트 1", "불릿포인트 2", "불릿포인트 3", "불릿포인트 4", "불릿포인트 5"]
-  },
-  "whyThisWillDominate": "이 제품이 시장을 독점할 수 있는 핵심 이유 요약"
+  "sellingPoints": ["셀링포인트1", "셀링포인트2", "셀링포인트3"],
+  "amazonTitle": "아마존 상품 타이틀 영어 200자 이내",
+  "dominationReason": "독점 가능 핵심 이유 2-3문장"
 }`;
 
   // Call Gemini API
