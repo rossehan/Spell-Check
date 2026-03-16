@@ -316,6 +316,11 @@ function VitaView() {
   const [top100CatSearch, setTop100CatSearch] = useState("");
   const [catDetailProducts, setCatDetailProducts] = useState([]);
   const [catDetailLoading, setCatDetailLoading] = useState(false);
+  const [keywordIntel, setKeywordIntel] = useState(null);
+  const [keywordIntelLoading, setKeywordIntelLoading] = useState(false);
+  const [googleTrends, setGoogleTrends] = useState(null);
+  const [googleTrendsLoading, setGoogleTrendsLoading] = useState(false);
+  const [aiDomSubTab, setAiDomSubTab] = useState("domination");
 
   useEffect(() => {
     fetch(`${API_BASE}/api/health`)
@@ -341,7 +346,19 @@ function VitaView() {
   useEffect(() => {
     if ((activeTab === "dashboard" || activeTab === "aiAnalysis") && !trends) loadTrends();
     if (activeTab === "browse") loadCategory(activeCategory);
-  }, [activeTab, activeCategory]);
+    if (activeTab === "aiAnalysis" && trends && !keywordIntel && !keywordIntelLoading) {
+      setKeywordIntelLoading(true);
+      fetch(`${API_BASE}/api/keyword-intelligence`)
+        .then(r => r.json()).then(d => { if (d.topKeywords) setKeywordIntel(d); })
+        .catch(() => {}).finally(() => setKeywordIntelLoading(false));
+    }
+    if (activeTab === "aiAnalysis" && !googleTrends && !googleTrendsLoading) {
+      setGoogleTrendsLoading(true);
+      fetch(`${API_BASE}/api/trend-keywords`)
+        .then(r => r.json()).then(d => { if (d.trendingKeywords) setGoogleTrends(d); })
+        .catch(() => {}).finally(() => setGoogleTrendsLoading(false));
+    }
+  }, [activeTab, activeCategory, trends]);
 
   // Fetch category detail products when single category selected in Top 100 filter
   useEffect(() => {
@@ -1284,6 +1301,459 @@ function VitaView() {
               <p style={{ color: "#64748b" }}>Amazon US Supplement Market - Domination Opportunity Intelligence</p>
             </div>
 
+            {/* Sub-tabs for AI Domination */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
+              {[
+                ["domination", "\u{1F3AF} Domination Score"],
+                ["keywords", "\u{1F50D} Keyword Intelligence"],
+                ["trends", "\u{1F4C8} Trend Analysis"],
+                ["hashtags", "#\uFE0F\u20E3 Hashtag Discovery"]
+              ].map(([id, label]) => (
+                <button key={id} onClick={() => setAiDomSubTab(id)} style={{
+                  background: aiDomSubTab === id ? "linear-gradient(135deg, #10b981, #3b82f6)" : "#fff",
+                  border: `1px solid ${aiDomSubTab === id ? "transparent" : "#e2e8f0"}`,
+                  borderRadius: 10, padding: "8px 18px", cursor: "pointer",
+                  fontSize: 13, fontWeight: 600,
+                  color: aiDomSubTab === id ? "#fff" : "#64748b",
+                  boxShadow: aiDomSubTab === id ? "0 2px 8px rgba(16,185,129,0.3)" : "none",
+                  transition: "all 0.2s"
+                }}>{label}</button>
+              ))}
+            </div>
+
+            {/* ═══════ KEYWORD INTELLIGENCE SUB-TAB ═══════ */}
+            {aiDomSubTab === "keywords" && (
+              <div>
+                {keywordIntelLoading ? <CategoryLoadingSpinner /> : keywordIntel ? (() => {
+                  const { topKeywords, topBigrams, trendingIngredients, formAnalysis, premiumKeywords, budgetKeywords, categoryKeywords } = keywordIntel;
+                  return (
+                    <div>
+                      {/* Summary Cards */}
+                      <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+                        {[
+                          { label: "Unique Keywords", value: topKeywords.length + "+", color: "#6366f1", bg: "#eef2ff", border: "#c7d2fe" },
+                          { label: "Cross-Category KW", value: trendingIngredients.length, color: "#10b981", bg: "#ecfdf5", border: "#a7f3d0" },
+                          { label: "Product Forms", value: formAnalysis.length, color: "#f59e0b", bg: "#fffbeb", border: "#fde68a" },
+                          { label: "Total Products", value: keywordIntel.totalProducts.toLocaleString(), color: "#ec4899", bg: "#fdf2f8", border: "#fbcfe8" },
+                        ].map((s, i) => (
+                          <div key={i} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: "14px 20px", flex: "1 1 160px", minWidth: 140 }}>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Trending Ingredients (Cross-Category) */}
+                      <div style={{ background: "linear-gradient(135deg, #ecfdf5 0%, #eff6ff 100%)", border: "2px solid #10b981", borderRadius: 16, padding: 24, marginBottom: 24 }}>
+                        <h3 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{"\u{1F525}"} Trending Ingredients (Cross-Category Keywords)</h3>
+                        <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>Keywords appearing across 3+ categories = market-wide trend</p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {trendingIngredients.map((k, i) => (
+                            <div key={k.keyword} style={{
+                              display: "flex", alignItems: "center", gap: 8,
+                              background: i < 5 ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.8)",
+                              border: `1px solid ${i < 5 ? "#10b981" : "#e2e8f0"}`,
+                              borderRadius: 10, padding: "8px 14px"
+                            }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: i < 5 ? "#10b981" : "#6366f1" }}>{i + 1}</span>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{k.keyword}</div>
+                                <div style={{ fontSize: 10, color: "#64748b" }}>
+                                  {k.count}x mentions | {k.categorySpread} categories
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
+                        {/* Top Single Keywords */}
+                        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>{"\u{1F4CA}"} Top Keywords by Frequency</h3>
+                          <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                            {topKeywords.slice(0, 40).map((k, i) => (
+                              <div key={k.keyword} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #f1f5f9" }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", width: 24 }}>{i + 1}</span>
+                                <div style={{ flex: 1 }}>
+                                  <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{k.keyword}</span>
+                                  {k.crossCategory && <span style={{ fontSize: 9, background: "#ecfdf5", color: "#10b981", padding: "1px 6px", borderRadius: 8, marginLeft: 6, fontWeight: 600 }}>CROSS</span>}
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                                  <div style={{ width: 60, height: 6, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
+                                    <div style={{ width: `${Math.min(100, k.density * 3)}%`, height: "100%", background: k.crossCategory ? "#10b981" : "#6366f1", borderRadius: 3 }} />
+                                  </div>
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", minWidth: 28 }}>{k.count}x</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Top Compound Keywords (Bigrams) */}
+                        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>{"\u{1F517}"} Top Compound Keywords</h3>
+                          <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                            {topBigrams.slice(0, 40).map((b, i) => (
+                              <div key={b.bigram} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #f1f5f9" }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", width: 24 }}>{i + 1}</span>
+                                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{b.bigram}</span>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: "#8b5cf6", flexShrink: 0 }}>{b.count}x</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Form Trend Analysis */}
+                      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                        <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>{"\u{1F48A}"} Product Form Trends</h3>
+                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                          {formAnalysis.map((f, i) => {
+                            const maxCount = formAnalysis[0]?.count || 1;
+                            const pct = Math.round((f.count / maxCount) * 100);
+                            return (
+                              <div key={f.form} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "14px 18px", minWidth: 130, flex: "1 1 130px" }}>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{f.form}</div>
+                                <div style={{ width: "100%", height: 6, background: "#e2e8f0", borderRadius: 3, marginBottom: 6 }}>
+                                  <div style={{ width: `${pct}%`, height: "100%", background: i === 0 ? "#10b981" : i === 1 ? "#3b82f6" : "#8b5cf6", borderRadius: 3 }} />
+                                </div>
+                                <div style={{ fontSize: 12, color: "#64748b" }}>{f.count} products | {f.categoryCount} categories</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Premium vs Budget Keywords */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                        <div style={{ background: "linear-gradient(135deg, #faf5ff 0%, #fdf2f8 100%)", border: "1px solid #e9d5ff", borderRadius: 14, padding: 20 }}>
+                          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#7c3aed", marginBottom: 12 }}>{"\u{1F451}"} Premium Product Keywords ($30+)</h3>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {premiumKeywords.map(k => (
+                              <span key={k.keyword} style={{ background: "rgba(124,58,237,0.1)", color: "#7c3aed", padding: "4px 12px", borderRadius: 16, fontSize: 12, fontWeight: 600 }}>{k.keyword} ({k.count})</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{ background: "linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)", border: "1px solid #a7f3d0", borderRadius: 14, padding: 20 }}>
+                          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#059669", marginBottom: 12 }}>{"\u{1F4B0}"} Budget Product Keywords (&lt;$15)</h3>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {budgetKeywords.map(k => (
+                              <span key={k.keyword} style={{ background: "rgba(5,150,105,0.1)", color: "#059669", padding: "4px 12px", borderRadius: 16, fontSize: 12, fontWeight: 600 }}>{k.keyword} ({k.count})</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })() : (
+                  <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>{"\u{1F50D}"}</div>
+                    <p>Click "Refresh" to load data for keyword analysis</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══════ TREND ANALYSIS SUB-TAB ═══════ */}
+            {aiDomSubTab === "trends" && (
+              <div>
+                {(googleTrendsLoading || keywordIntelLoading) && !googleTrends && !keywordIntel ? <CategoryLoadingSpinner /> : (
+                  <div>
+                    {/* Google Search Trends */}
+                    <div style={{ background: "linear-gradient(135deg, #eff6ff 0%, #eef2ff 50%, #faf5ff 100%)", border: "2px solid #3b82f6", borderRadius: 16, padding: 24, marginBottom: 24 }}>
+                      <h3 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{"\u{1F310}"} Google Search Trend Analysis</h3>
+                      <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>Real-time Google search suggestions for supplement keywords</p>
+                      {googleTrends ? (
+                        <div>
+                          <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+                            <div style={{ background: "rgba(255,255,255,0.8)", borderRadius: 10, padding: "10px 16px" }}>
+                              <div style={{ fontSize: 24, fontWeight: 800, color: "#3b82f6" }}>{googleTrends.trendingKeywords.length}</div>
+                              <div style={{ fontSize: 11, color: "#64748b" }}>Trending Keywords</div>
+                            </div>
+                            <div style={{ background: "rgba(255,255,255,0.8)", borderRadius: 10, padding: "10px 16px" }}>
+                              <div style={{ fontSize: 24, fontWeight: 800, color: "#6366f1" }}>{googleTrends.suggestions.length}</div>
+                              <div style={{ fontSize: 11, color: "#64748b" }}>Search Suggestions</div>
+                            </div>
+                          </div>
+                          {/* Trending Keywords from Google */}
+                          <div style={{ marginBottom: 16 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#1e40af", marginBottom: 8 }}>Top Trending Keywords (from Google Search)</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                              {googleTrends.trendingKeywords.slice(0, 25).map((k, i) => (
+                                <div key={k.keyword} style={{
+                                  background: i < 5 ? "rgba(59,130,246,0.15)" : "rgba(255,255,255,0.9)",
+                                  border: `1px solid ${i < 5 ? "#3b82f6" : "#e2e8f0"}`,
+                                  borderRadius: 10, padding: "6px 14px",
+                                  display: "flex", alignItems: "center", gap: 6
+                                }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: i < 5 ? "#3b82f6" : "#64748b" }}>{i + 1}</span>
+                                  <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{k.keyword}</span>
+                                  <span style={{ fontSize: 10, color: "#94a3b8" }}>({k.count})</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Sample Suggestions */}
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#1e40af", marginBottom: 8 }}>Google Search Suggestions (Raw)</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 6, maxHeight: 300, overflowY: "auto" }}>
+                              {googleTrends.suggestions.slice(0, 40).map((s, i) => (
+                                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "rgba(255,255,255,0.7)", borderRadius: 8, fontSize: 12, color: "#334155" }}>
+                                  <span style={{ color: "#3b82f6", fontWeight: 700 }}>{"\u{1F50D}"}</span> {s}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: "center", padding: 30, color: "#94a3b8", fontSize: 13 }}>Google trend data loading...</div>
+                      )}
+                    </div>
+
+                    {/* Trend vs Amazon Overlap Analysis */}
+                    {googleTrends && keywordIntel && (() => {
+                      const googleKWSet = new Set(googleTrends.trendingKeywords.map(k => k.keyword));
+                      const amazonKWSet = new Set(keywordIntel.topKeywords.slice(0, 50).map(k => k.keyword));
+                      const overlap = [...googleKWSet].filter(k => amazonKWSet.has(k));
+                      const googleOnly = [...googleKWSet].filter(k => !amazonKWSet.has(k));
+                      const amazonOnly = [...amazonKWSet].filter(k => !googleKWSet.has(k)).slice(0, 15);
+
+                      return (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
+                          <div style={{ background: "#fff", border: "2px solid #10b981", borderRadius: 14, padding: 20 }}>
+                            <h4 style={{ fontSize: 14, fontWeight: 700, color: "#10b981", marginBottom: 10 }}>{"\u2705"} Google + Amazon Overlap ({overlap.length})</h4>
+                            <p style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>High search demand AND strong Amazon presence = validated market</p>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {overlap.map(k => (
+                                <span key={k} style={{ background: "#ecfdf5", color: "#059669", padding: "3px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{k}</span>
+                              ))}
+                              {overlap.length === 0 && <span style={{ fontSize: 12, color: "#94a3b8" }}>No overlapping keywords</span>}
+                            </div>
+                          </div>
+                          <div style={{ background: "#fff", border: "2px solid #f59e0b", borderRadius: 14, padding: 20 }}>
+                            <h4 style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b", marginBottom: 10 }}>{"\u{1F4A1}"} Google Only ({googleOnly.length})</h4>
+                            <p style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>Search demand rising but Amazon supply may be low = OPPORTUNITY</p>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {googleOnly.slice(0, 15).map(k => (
+                                <span key={k} style={{ background: "#fffbeb", color: "#d97706", padding: "3px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{k}</span>
+                              ))}
+                            </div>
+                          </div>
+                          <div style={{ background: "#fff", border: "2px solid #6366f1", borderRadius: 14, padding: 20 }}>
+                            <h4 style={{ fontSize: 14, fontWeight: 700, color: "#6366f1", marginBottom: 10 }}>{"\u{1F4E6}"} Amazon Only ({amazonOnly.length})</h4>
+                            <p style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>Strong product supply but low search = saturated or niche</p>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {amazonOnly.map(k => (
+                                <span key={k} style={{ background: "#eef2ff", color: "#4f46e5", padding: "3px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{k}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Category Trend Momentum */}
+                    {keywordIntel && trends && (() => {
+                      const cats = trends.categories || {};
+                      const catEntries = Object.entries(cats);
+                      const trendMomentum = catEntries.map(([catId, c]) => {
+                        const cat = CATEGORIES.find(ct => ct.id === catId);
+                        const catKW = keywordIntel.categoryKeywords[catId] || [];
+                        const trendingCount = catKW.filter(k =>
+                          keywordIntel.trendingIngredients.some(t => t.keyword === k.keyword)
+                        ).length;
+                        const googleMatch = googleTrends ? googleTrends.trendingKeywords.filter(gk =>
+                          catKW.some(ck => ck.keyword === gk.keyword) || catId.toLowerCase().includes(gk.keyword)
+                        ).length : 0;
+                        const momentum = Math.min(100, Math.round(trendingCount * 15 + googleMatch * 25 + (c.avgDailySales || 0) / 2));
+                        return { catId, cat, c, trendingCount, googleMatch, momentum };
+                      }).sort((a, b) => b.momentum - a.momentum);
+
+                      return (
+                        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{"\u{1F4C8}"} Category Trend Momentum</h3>
+                          <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>Categories ranked by trend strength (keyword trends + Google search + demand)</p>
+                          <div style={{ maxHeight: 500, overflowY: "auto" }}>
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                              <thead><tr style={{ borderBottom: "2px solid #e2e8f0" }}>
+                                {["#", "Category", "Momentum", "Trending KW", "Google Match", "Avg Sales/Day", "Signal"].map(h => (
+                                  <th key={h} style={{ padding: "8px 6px", textAlign: "left", fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase", position: "sticky", top: 0, background: "#fff" }}>{h}</th>
+                                ))}
+                              </tr></thead>
+                              <tbody>
+                                {trendMomentum.slice(0, 30).map((t, i) => (
+                                  <tr key={t.catId} style={{ borderBottom: "1px solid #f1f5f9", background: i < 3 ? "#ecfdf508" : "transparent" }}>
+                                    <td style={{ padding: "8px 6px", fontWeight: 700, fontSize: 13, color: i < 3 ? "#d97706" : "#94a3b8" }}>{i + 1}</td>
+                                    <td style={{ padding: "8px 6px", fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{t.cat?.icon} {t.cat?.name}</td>
+                                    <td style={{ padding: "8px 6px" }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                        <div style={{ width: 60, height: 8, background: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
+                                          <div style={{ width: `${t.momentum}%`, height: "100%", background: t.momentum >= 60 ? "#10b981" : t.momentum >= 30 ? "#f59e0b" : "#94a3b8", borderRadius: 4 }} />
+                                        </div>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: t.momentum >= 60 ? "#10b981" : t.momentum >= 30 ? "#f59e0b" : "#94a3b8" }}>{t.momentum}</span>
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: "8px 6px", fontSize: 12, color: "#6366f1", fontWeight: 600 }}>{t.trendingCount}</td>
+                                    <td style={{ padding: "8px 6px", fontSize: 12, color: "#3b82f6", fontWeight: 600 }}>{t.googleMatch}</td>
+                                    <td style={{ padding: "8px 6px", fontSize: 12, color: "#0f172a" }}>~{t.c.avgDailySales || 0}</td>
+                                    <td style={{ padding: "8px 6px" }}>
+                                      <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 10,
+                                        background: t.momentum >= 60 ? "#ecfdf5" : t.momentum >= 30 ? "#fffbeb" : "#f8fafc",
+                                        color: t.momentum >= 60 ? "#059669" : t.momentum >= 30 ? "#d97706" : "#94a3b8"
+                                      }}>{t.momentum >= 60 ? "HOT" : t.momentum >= 30 ? "WARM" : "COOL"}</span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══════ HASHTAG DISCOVERY SUB-TAB ═══════ */}
+            {aiDomSubTab === "hashtags" && (
+              <div>
+                {keywordIntelLoading ? <CategoryLoadingSpinner /> : keywordIntel ? (() => {
+                  const { hashtags, trendingIngredients, topKeywords, formAnalysis } = keywordIntel;
+
+                  // Generate extended hashtags
+                  const formHashtags = formAnalysis.map(f => ({
+                    tag: '#' + f.form + 'Supplements',
+                    count: f.count,
+                    type: 'form'
+                  }));
+                  const ingredientHashtags = trendingIngredients.slice(0, 25).map(k => ({
+                    tag: '#' + k.keyword.charAt(0).toUpperCase() + k.keyword.slice(1),
+                    count: k.count,
+                    spread: k.categorySpread,
+                    type: 'ingredient'
+                  }));
+                  const lifestyleHashtags = [
+                    { tag: '#GutHealth', type: 'lifestyle' },
+                    { tag: '#LongevityHack', type: 'lifestyle' },
+                    { tag: '#BiohackingLife', type: 'lifestyle' },
+                    { tag: '#CleanSupplements', type: 'lifestyle' },
+                    { tag: '#HolisticHealth', type: 'lifestyle' },
+                    { tag: '#WellnessJourney', type: 'lifestyle' },
+                    { tag: '#SupplementStack', type: 'lifestyle' },
+                    { tag: '#NaturalHealth', type: 'lifestyle' },
+                    { tag: '#FitnessNutrition', type: 'lifestyle' },
+                    { tag: '#ImmuneBoost', type: 'lifestyle' },
+                    { tag: '#BrainHealth', type: 'lifestyle' },
+                    { tag: '#AntiAging', type: 'lifestyle' },
+                    { tag: '#MuscleRecovery', type: 'lifestyle' },
+                    { tag: '#PlantBased', type: 'lifestyle' },
+                    { tag: '#KetoDiet', type: 'lifestyle' },
+                  ];
+
+                  // Combine Google trends if available
+                  const googleHashtags = googleTrends
+                    ? googleTrends.trendingKeywords.slice(0, 15).map(k => ({
+                        tag: '#' + k.keyword.charAt(0).toUpperCase() + k.keyword.slice(1),
+                        count: k.count,
+                        type: 'google'
+                      }))
+                    : [];
+
+                  return (
+                    <div>
+                      {/* Hashtag Hero Section */}
+                      <div style={{ background: "linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)", borderRadius: 16, padding: 28, marginBottom: 24, color: "#fff" }}>
+                        <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>#\uFE0F\u20E3 Hashtag & Keyword Discovery</h3>
+                        <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 20 }}>Amazon product data + Google search trends = actionable hashtags for marketing & product positioning</p>
+                        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                          {[
+                            { label: "Ingredient Tags", value: ingredientHashtags.length, color: "#10b981" },
+                            { label: "Form Tags", value: formHashtags.length, color: "#3b82f6" },
+                            { label: "Google Trends", value: googleHashtags.length, color: "#f59e0b" },
+                            { label: "Lifestyle Tags", value: lifestyleHashtags.length, color: "#ec4899" },
+                          ].map((s, i) => (
+                            <div key={i} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px 18px", border: `1px solid ${s.color}33` }}>
+                              <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
+                              <div style={{ fontSize: 11, color: "#94a3b8" }}>{s.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Ingredient-Based Hashtags */}
+                      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, marginBottom: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                        <h3 style={{ fontSize: 15, fontWeight: 700, color: "#10b981", marginBottom: 4 }}>{"\u{1F33F}"} Ingredient-Based Hashtags (from Amazon Data)</h3>
+                        <p style={{ fontSize: 11, color: "#64748b", marginBottom: 14 }}>Derived from cross-category trending ingredients on Amazon</p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {ingredientHashtags.map((h, i) => (
+                            <div key={h.tag} style={{
+                              background: i < 5 ? "linear-gradient(135deg, #ecfdf5, #f0fdf4)" : "#f8fafc",
+                              border: `1px solid ${i < 5 ? "#10b981" : "#e2e8f0"}`,
+                              borderRadius: 20, padding: "6px 16px",
+                              display: "flex", alignItems: "center", gap: 6, cursor: "default"
+                            }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: i < 5 ? "#059669" : "#64748b" }}>{h.tag}</span>
+                              <span style={{ fontSize: 10, color: "#94a3b8" }}>{h.count}x</span>
+                              {h.spread >= 5 && <span style={{ fontSize: 9, background: "#fef3c7", color: "#d97706", padding: "1px 6px", borderRadius: 8, fontWeight: 600 }}>HOT</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Google Trend Hashtags */}
+                      {googleHashtags.length > 0 && (
+                        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, marginBottom: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#3b82f6", marginBottom: 4 }}>{"\u{1F310}"} Google Search Trend Hashtags</h3>
+                          <p style={{ fontSize: 11, color: "#64748b", marginBottom: 14 }}>From real-time Google search autocomplete data</p>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {googleHashtags.map((h, i) => (
+                              <div key={h.tag} style={{
+                                background: i < 3 ? "linear-gradient(135deg, #eff6ff, #eef2ff)" : "#f8fafc",
+                                border: `1px solid ${i < 3 ? "#3b82f6" : "#e2e8f0"}`,
+                                borderRadius: 20, padding: "6px 16px"
+                              }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: i < 3 ? "#2563eb" : "#64748b" }}>{h.tag}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Form + Lifestyle Hashtags */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#8b5cf6", marginBottom: 12 }}>{"\u{1F48A}"} Product Form Hashtags</h3>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {formHashtags.map(h => (
+                              <span key={h.tag} style={{ background: "#faf5ff", color: "#7c3aed", border: "1px solid #e9d5ff", padding: "5px 14px", borderRadius: 20, fontSize: 13, fontWeight: 600 }}>{h.tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#ec4899", marginBottom: 12 }}>{"\u2728"} Lifestyle & Marketing Hashtags</h3>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {lifestyleHashtags.map(h => (
+                              <span key={h.tag} style={{ background: "#fdf2f8", color: "#db2777", border: "1px solid #fbcfe8", padding: "5px 14px", borderRadius: 20, fontSize: 13, fontWeight: 600 }}>{h.tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })() : (
+                  <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>#\uFE0F\u20E3</div>
+                    <p>Click "Refresh" to load data for hashtag discovery</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══════ DOMINATION SCORE SUB-TAB (original) ═══════ */}
+            {aiDomSubTab === "domination" && (
+            <>
             {trendsLoading && !trends ? <CategoryLoadingSpinner />
             : trends ? (() => {
               const cats = trends.categories || {};
@@ -1292,11 +1762,12 @@ function VitaView() {
 
               // ──── DOMINATION SCORE ALGORITHM ────
               // Factors:
-              // 1. Market Fragmentation (30%) - Low HHI = many small brands = easier to dominate
-              // 2. Weak Leader (20%) - Low top brand share = no dominant player
-              // 3. Supply-Demand Gap (20%) - High demand + few products = underserved
+              // 1. Market Fragmentation (25%) - Low HHI = many small brands = easier to dominate
+              // 2. Weak Leader (15%) - Low top brand share = no dominant player
+              // 3. Supply-Demand Gap (15%) - High demand + few products = underserved
               // 4. Revenue Potential (15%) - High revenue = worth dominating
               // 5. Price Gap Opportunity (15%) - Wide price spread = room for positioning
+              // 6. Trend Momentum (15%) - Google search trends + keyword intelligence
 
               const maxRev = Math.max(...catEntries.map(([,c]) => c.estimatedMonthlyRevenue || 0), 1);
               const maxSpread = Math.max(...catEntries.map(([,c]) => c.priceSpread || 0), 1);
@@ -1336,13 +1807,31 @@ function VitaView() {
                 // 5. Price Gap Score (0-100) - Wide spread = more room
                 const priceGapScore = Math.round((priceSpread / maxSpread) * 100);
 
-                // Weighted total
+                // 6. Trend Momentum Score (0-100) - based on keyword intelligence + Google trends
+                let trendScore = 50; // default neutral
+                if (keywordIntel) {
+                  const catKW = keywordIntel.categoryKeywords?.[catId] || [];
+                  const trendingMatchCount = catKW.filter(k =>
+                    (keywordIntel.trendingIngredients || []).some(t => t.keyword === k.keyword)
+                  ).length;
+                  trendScore = Math.min(100, trendingMatchCount * 20 + 30);
+                }
+                if (googleTrends) {
+                  const googleMatch = googleTrends.trendingKeywords.filter(gk =>
+                    catId.toLowerCase().includes(gk.keyword) ||
+                    (c.topProducts || []).some(p => p.title?.toLowerCase().includes(gk.keyword))
+                  ).length;
+                  trendScore = Math.min(100, trendScore + googleMatch * 15);
+                }
+
+                // Weighted total (with trend momentum)
                 const dominationScore = Math.round(
-                  fragmentationScore * 0.30 +
-                  weakLeaderScore * 0.20 +
-                  supplyDemandScore * 0.20 +
+                  fragmentationScore * 0.25 +
+                  weakLeaderScore * 0.15 +
+                  supplyDemandScore * 0.15 +
                   revenueScore * 0.15 +
-                  priceGapScore * 0.15
+                  priceGapScore * 0.15 +
+                  trendScore * 0.15
                 );
 
                 // Entry Strategy Recommendations
@@ -1372,7 +1861,7 @@ function VitaView() {
                 return {
                   catId, cat, c,
                   dominationScore, fragmentationScore: Math.round(fragmentationScore), weakLeaderScore: Math.round(weakLeaderScore),
-                  supplyDemandScore, revenueScore, priceGapScore,
+                  supplyDemandScore, revenueScore, priceGapScore, trendScore: Math.round(trendScore),
                   difficulty, diffColor,
                   recommendedPrice, premiumPrice, avgPrice, minPrice, maxPrice,
                   dominantForm, underservedForms,
@@ -1462,7 +1951,7 @@ function VitaView() {
                     <div style={{ maxHeight: 600, overflowY: "auto" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse" }}>
                         <thead><tr style={{ borderBottom: "2px solid #e2e8f0" }}>
-                          {["#", "Category", "Score", "Fragmentation", "Weak Leader", "Supply Gap", "Revenue", "Price Gap", "Difficulty", "Entry Price"].map(h => (
+                          {["#", "Category", "Score", "Fragmentation", "Weak Leader", "Supply Gap", "Revenue", "Price Gap", "Trend", "Difficulty", "Entry Price"].map(h => (
                             <th key={h} style={{ padding: "10px 8px", textAlign: h === "#" ? "center" : "left", color: "#64748b", fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, position: "sticky", top: 0, background: "#fff", whiteSpace: "nowrap" }}>{h}</th>
                           ))}
                         </tr></thead>
@@ -1486,6 +1975,7 @@ function VitaView() {
                               <td style={{ padding: "10px 8px", fontSize: 12, color: "#f59e0b" }}>{d.supplyDemandScore}</td>
                               <td style={{ padding: "10px 8px", fontSize: 12, color: "#10b981" }}>{d.revenueScore}</td>
                               <td style={{ padding: "10px 8px", fontSize: 12, color: "#ec4899" }}>{d.priceGapScore}</td>
+                              <td style={{ padding: "10px 8px", fontSize: 12, color: "#14b8a6", fontWeight: d.trendScore >= 70 ? 700 : 400 }}>{d.trendScore}{d.trendScore >= 70 ? "\u{1F525}" : ""}</td>
                               <td style={{ padding: "10px 8px" }}>
                                 <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10, background: `${d.diffColor}15`, color: d.diffColor }}>{d.difficulty}</span>
                               </td>
@@ -1531,6 +2021,7 @@ function VitaView() {
                               { label: "Supply Gap", value: d.supplyDemandScore, color: "#f59e0b" },
                               { label: "Revenue", value: d.revenueScore, color: "#10b981" },
                               { label: "Price Gap", value: d.priceGapScore, color: "#ec4899" },
+                              { label: "Trend", value: d.trendScore, color: "#14b8a6" },
                             ].map(s => (
                               <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                                 <span style={{ fontSize: 10, color: "#64748b", width: 80, flexShrink: 0 }}>{s.label}</span>
@@ -1657,11 +2148,12 @@ function VitaView() {
                     <h3 style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>{"\u{1F4D0}"} Domination Score Methodology</h3>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
                       {[
-                        { label: "Fragmentation (30%)", desc: "HHI-based market concentration. Lower = easier to enter", color: "#0ea5e9" },
-                        { label: "Weak Leader (20%)", desc: "Top brand market share. Lower share = no dominant player", color: "#8b5cf6" },
-                        { label: "Supply-Demand Gap (20%)", desc: "Demand per product count. Higher = underserved market", color: "#f59e0b" },
+                        { label: "Fragmentation (25%)", desc: "HHI-based market concentration. Lower = easier to enter", color: "#0ea5e9" },
+                        { label: "Weak Leader (15%)", desc: "Top brand market share. Lower share = no dominant player", color: "#8b5cf6" },
+                        { label: "Supply-Demand Gap (15%)", desc: "Demand per product count. Higher = underserved market", color: "#f59e0b" },
                         { label: "Revenue Potential (15%)", desc: "Estimated monthly revenue. Higher = more reward", color: "#10b981" },
                         { label: "Price Gap (15%)", desc: "Price range spread. Wider = more positioning room", color: "#ec4899" },
+                        { label: "Trend Momentum (15%)", desc: "Google search trends + cross-category keyword signals", color: "#14b8a6" },
                       ].map(m => (
                         <div key={m.label} style={{ padding: 10, background: "#f8fafc", borderRadius: 8, borderLeft: `3px solid ${m.color}` }}>
                           <div style={{ fontSize: 12, fontWeight: 600, color: m.color, marginBottom: 4 }}>{m.label}</div>
@@ -1677,6 +2169,8 @@ function VitaView() {
                 <div style={{ fontSize: 48, marginBottom: 16 }}>{"\u{1F916}"}</div>
                 <p>Click "Refresh" to load data for AI analysis</p>
               </div>
+            )}
+            </>
             )}
           </div>
         )}

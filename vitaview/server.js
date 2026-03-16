@@ -334,6 +334,241 @@ app.get('/api/debug', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// ──── KEYWORD INTELLIGENCE ────
+
+const STOP_WORDS = new Set([
+  'the','a','an','and','or','for','with','in','of','to','by','is','it','at','on','as','from','that','this',
+  'mg','mcg','count','caps','capsule','capsules','tablet','tablets','softgel','softgels','gummy','gummies',
+  'supplement','supplements','serving','servings','supply','day','days','month','months','week','weeks',
+  'made','usa','pack','per','oz','fl','lb','lbs','each','size','ct','bottle','bottles',
+  'non','gmo','free','gluten','vegan','organic','natural','premium','extra','strength',
+  'men','women','adult','adults','kids','children','unflavored','flavor','flavored'
+]);
+
+function extractKeywords(title) {
+  if (!title) return [];
+  return title.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !STOP_WORDS.has(w) && !/^\d+$/.test(w));
+}
+
+function extractBigrams(words) {
+  const bigrams = [];
+  for (let i = 0; i < words.length - 1; i++) {
+    bigrams.push(words[i] + ' ' + words[i + 1]);
+  }
+  return bigrams;
+}
+
+// Keyword Intelligence endpoint - deep analysis of product title keywords
+app.get('/api/keyword-intelligence', (req, res) => {
+  if (!trendsCache) return res.json({ error: 'Load trends data first', keywords: [], bigrams: [], categoryKeywords: {}, hashtags: [] });
+
+  const allProducts = [];
+  const categoryProducts = {};
+  Object.entries(trendsCache.categories || {}).forEach(([catId, cat]) => {
+    categoryProducts[catId] = [];
+    (cat.topProducts || []).forEach(p => {
+      allProducts.push({ ...p, category: catId });
+      categoryProducts[catId].push(p);
+    });
+  });
+
+  // 1. Single keyword frequency
+  const kwCounts = {};
+  const kwByCategory = {};
+  allProducts.forEach(p => {
+    const words = extractKeywords(p.title);
+    const seen = new Set();
+    words.forEach(w => {
+      kwCounts[w] = (kwCounts[w] || 0) + 1;
+      if (!seen.has(w)) {
+        seen.add(w);
+        if (!kwByCategory[w]) kwByCategory[w] = new Set();
+        kwByCategory[w].add(p.category);
+      }
+    });
+  });
+
+  // 2. Bigram frequency
+  const bigramCounts = {};
+  allProducts.forEach(p => {
+    const words = extractKeywords(p.title);
+    extractBigrams(words).forEach(bg => {
+      bigramCounts[bg] = (bigramCounts[bg] || 0) + 1;
+    });
+  });
+
+  // 3. Keywords sorted by frequency
+  const topKeywords = Object.entries(kwCounts)
+    .map(([keyword, count]) => ({
+      keyword,
+      count,
+      density: +(count / allProducts.length * 100).toFixed(1),
+      categorySpread: kwByCategory[keyword]?.size || 1,
+      crossCategory: (kwByCategory[keyword]?.size || 1) >= 3
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 150);
+
+  // 4. Top bigrams
+  const topBigrams = Object.entries(bigramCounts)
+    .map(([bigram, count]) => ({ bigram, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 80);
+
+  // 5. Per-category keyword analysis (top keywords per category)
+  const catKeywordAnalysis = {};
+  Object.entries(categoryProducts).forEach(([catId, products]) => {
+    const catKW = {};
+    products.forEach(p => {
+      extractKeywords(p.title).forEach(w => {
+        catKW[w] = (catKW[w] || 0) + 1;
+      });
+    });
+    catKeywordAnalysis[catId] = Object.entries(catKW)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([keyword, count]) => ({ keyword, count }));
+  });
+
+  // 6. Trending ingredient detection (keywords appearing across many categories = trending)
+  const trendingIngredients = topKeywords
+    .filter(k => k.categorySpread >= 3 && k.count >= 5)
+    .sort((a, b) => b.categorySpread - a.categorySpread || b.count - a.count)
+    .slice(0, 30);
+
+  // 7. Generate hashtags from trending keywords
+  const hashtags = trendingIngredients.slice(0, 20).map(k => ({
+    tag: '#' + k.keyword.charAt(0).toUpperCase() + k.keyword.slice(1),
+    count: k.count,
+    spread: k.categorySpread,
+    momentum: Math.round((k.categorySpread / Object.keys(categoryProducts).length) * 100)
+  }));
+
+  // 8. Form trend analysis
+  const formPatterns = {
+    'Gummy': /gumm(y|ies)/i, 'Capsule': /capsule/i, 'Softgel': /softgel/i,
+    'Tablet': /tablet/i, 'Powder': /powder/i, 'Liquid': /liquid|drop/i,
+    'Chewable': /chewable/i, 'Spray': /spray/i, 'Lozenge': /lozenge/i
+  };
+  const formTrends = {};
+  allProducts.forEach(p => {
+    Object.entries(formPatterns).forEach(([form, regex]) => {
+      if (regex.test(p.title)) {
+        if (!formTrends[form]) formTrends[form] = { count: 0, categories: new Set() };
+        formTrends[form].count++;
+        formTrends[form].categories.add(p.category);
+      }
+    });
+  });
+  const formAnalysis = Object.entries(formTrends)
+    .map(([form, data]) => ({ form, count: data.count, categoryCount: data.categories.size }))
+    .sort((a, b) => b.count - a.count);
+
+  // 9. Price tier keyword analysis (which keywords appear in premium vs budget products)
+  const premiumKeywords = {};
+  const budgetKeywords = {};
+  allProducts.forEach(p => {
+    const words = extractKeywords(p.title);
+    if (p.price > 30) words.forEach(w => { premiumKeywords[w] = (premiumKeywords[w] || 0) + 1; });
+    if (p.price && p.price < 15) words.forEach(w => { budgetKeywords[w] = (budgetKeywords[w] || 0) + 1; });
+  });
+
+  const premiumOnlyKW = Object.entries(premiumKeywords)
+    .filter(([kw]) => !budgetKeywords[kw] || premiumKeywords[kw] > budgetKeywords[kw] * 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([keyword, count]) => ({ keyword, count }));
+
+  const budgetOnlyKW = Object.entries(budgetKeywords)
+    .filter(([kw]) => !premiumKeywords[kw] || budgetKeywords[kw] > premiumKeywords[kw] * 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([keyword, count]) => ({ keyword, count }));
+
+  res.json({
+    totalProducts: allProducts.length,
+    totalCategories: Object.keys(categoryProducts).length,
+    topKeywords,
+    topBigrams,
+    categoryKeywords: catKeywordAnalysis,
+    trendingIngredients,
+    hashtags,
+    formAnalysis,
+    premiumKeywords: premiumOnlyKW,
+    budgetKeywords: budgetOnlyKW,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Google Autocomplete suggestions endpoint
+app.get('/api/google-suggest', async (req, res) => {
+  const q = req.query.q || 'supplement';
+  try {
+    const result = await httpsGet(
+      'suggestqueries.google.com',
+      `/complete/search?client=firefox&q=${encodeURIComponent(q)}`,
+      { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    );
+    const suggestions = Array.isArray(result.data) ? result.data[1] || [] : [];
+    res.json({ query: q, suggestions });
+  } catch(e) {
+    res.json({ query: q, suggestions: [], error: e.message });
+  }
+});
+
+// Google Trends - batch keyword suggestions for supplement categories
+app.get('/api/trend-keywords', async (req, res) => {
+  const seedKeywords = [
+    'supplement trending', 'best supplement 2025', 'new supplement',
+    'health supplement popular', 'vitamin trending', 'superfood supplement',
+    'nootropic supplement', 'gut health supplement', 'collagen supplement trending',
+    'mushroom supplement', 'peptide supplement', 'longevity supplement'
+  ];
+
+  try {
+    const allSuggestions = [];
+    for (let i = 0; i < seedKeywords.length; i++) {
+      try {
+        const result = await httpsGet(
+          'suggestqueries.google.com',
+          `/complete/search?client=firefox&q=${encodeURIComponent(seedKeywords[i])}`,
+          { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+        );
+        const suggestions = Array.isArray(result.data) ? result.data[1] || [] : [];
+        suggestions.forEach(s => {
+          if (!allSuggestions.includes(s)) allSuggestions.push(s);
+        });
+      } catch(e) { /* skip failed requests */ }
+      if (i < seedKeywords.length - 1) await new Promise(r => setTimeout(r, 200));
+    }
+
+    // Extract trending keywords from suggestions
+    const kwFreq = {};
+    allSuggestions.forEach(suggestion => {
+      const words = suggestion.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/)
+        .filter(w => w.length > 2 && !STOP_WORDS.has(w) && !/^\d+$/.test(w));
+      words.forEach(w => { kwFreq[w] = (kwFreq[w] || 0) + 1; });
+    });
+
+    const trendingKeywords = Object.entries(kwFreq)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 40)
+      .map(([keyword, count]) => ({ keyword, count, source: 'google' }));
+
+    res.json({
+      suggestions: allSuggestions,
+      trendingKeywords,
+      seedQueries: seedKeywords.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch(e) {
+    res.json({ suggestions: [], trendingKeywords: [], error: e.message });
+  }
+});
+
 // Pre-fetch trends data function (reused by startup and API)
 async function fetchTrendsData() {
   const entries = Object.entries(CATEGORY_KEYWORDS);
