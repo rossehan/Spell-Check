@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OEM 생산일정 스케줄러</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:#f0f2f5;color:#333}
+.nav{background:linear-gradient(135deg,#1a73e8,#0d47a1);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.nav-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;padding:0 20px}
+.nav-logo{color:#fff;font-size:18px;font-weight:700;padding:16px 0;white-space:nowrap}
+.nav-logo span{font-size:12px;font-weight:400;opacity:.8;display:block}
+.nav-tabs{display:flex;margin-left:40px}
+.nav-tab{color:rgba(255,255,255,.7);padding:18px 20px;cursor:pointer;font-size:14px;font-weight:500;border-bottom:3px solid transparent;transition:.2s;white-space:nowrap}
+.nav-tab:hover{color:#fff;background:rgba(255,255,255,.1)}
+.nav-tab.active{color:#fff;border-bottom-color:#fff}
+.container{max-width:1400px;margin:0 auto;padding:24px 20px}
+.tab-content{display:none}.tab-content.active{display:block}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:24px;margin-bottom:20px}
+.card-title{font-size:18px;font-weight:700;margin-bottom:16px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+@media(max-width:768px){.grid-2,.grid-3{grid-template-columns:1fr}}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none}
+.form-group input:focus,.form-group select:focus{border-color:#1a73e8}
+.btn{padding:10px 24px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s}
+.btn-primary{background:#1a73e8;color:#fff}.btn-primary:hover{background:#1557b0}
+.btn-secondary{background:#f0f2f5;color:#333;border:1px solid #ddd}.btn-secondary:hover{background:#e0e2e5}
+.btn-success{background:#0f9d58;color:#fff}
+.btn-danger{background:#ea4335;color:#fff}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f8f9fa;padding:10px 12px;text-align:left;font-weight:600;color:#555;border-bottom:2px solid #e0e0e0;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #f0f0f0}
+tr:hover{background:#f8f9ff}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-blue{background:#e3f2fd;color:#1565c0}
+.badge-green{background:#e8f5e9;color:#2e7d32}
+.badge-orange{background:#fff3e0;color:#e65100}
+.badge-red{background:#fce4ec;color:#c62828}
+.badge-purple{background:#f3e5f5;color:#6a1b9a}
+.badge-gray{background:#f5f5f5;color:#616161}
+.timeline{position:relative;padding-left:30px}
+.timeline::before{content:'';position:absolute;left:10px;top:0;bottom:0;width:2px;background:#e0e0e0}
+.timeline-item{position:relative;margin-bottom:20px}
+.timeline-item::before{content:'';position:absolute;left:-24px;top:4px;width:12px;height:12px;border-radius:50%;background:#1a73e8;border:2px solid #fff;box-shadow:0 0 0 2px #1a73e8}
+.timeline-item.completed::before{background:#0f9d58;box-shadow:0 0 0 2px #0f9d58}
+.timeline-item.current::before{background:#f9ab00;box-shadow:0 0 0 2px #f9ab00;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 2px #f9ab00}50%{box-shadow:0 0 0 6px rgba(249,171,0,.3)}}
+.timeline-header{font-weight:600;font-size:14px}
+.timeline-date{font-size:12px;color:#888;margin-top:2px}
+.timeline-desc{font-size:13px;color:#666;margin-top:4px}
+.gantt-container{overflow-x:auto;padding:10px 0}
+.gantt-row{display:flex;align-items:center;margin-bottom:6px}
+.gantt-label{width:180px;min-width:180px;font-size:12px;font-weight:500;padding-right:10px;text-align:right}
+.gantt-bar-area{flex:1;height:28px;position:relative;background:#f5f5f5;border-radius:4px}
+.gantt-bar{position:absolute;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:600;min-width:20px}
+.gantt-months{display:flex;margin-left:180px;margin-bottom:8px}
+.gantt-month{flex:1;font-size:11px;color:#888;text-align:center;border-left:1px solid #eee;padding:4px 0}
+.checklist-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0}
+.checklist-item:last-child{border-bottom:none}
+.checklist-item input[type="checkbox"]{margin-top:3px;width:18px;height:18px;accent-color:#1a73e8}
+.checklist-label{flex:1}
+.checklist-label .title{font-weight:600;font-size:14px}
+.checklist-label .desc{font-size:12px;color:#888;margin-top:2px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:16px;padding:32px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.progress-bar{height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s}
+.inner-tabs{display:flex;border-bottom:2px solid #e0e0e0;margin-bottom:16px}
+.inner-tab{padding:10px 20px;cursor:pointer;font-size:14px;font-weight:500;color:#888;border-bottom:2px solid transparent;margin-bottom:-2px}
+.inner-tab.active{color:#1a73e8;border-bottom-color:#1a73e8}
+.loading{text-align:center;padding:40px;color:#888}
+.spinner{display:inline-block;width:30px;height:30px;border:3px solid #e0e0e0;border-top-color:#1a73e8;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px}
+.alert-info{background:#e3f2fd;color:#1565c0}
+.alert-warning{background:#fff3e0;color:#e65100}
+.alert-success{background:#e8f5e9;color:#2e7d32}
+.project-card{border:1px solid #e0e0e0;border-radius:12px;padding:20px;margin-bottom:16px;cursor:pointer;transition:.2s}
+.project-card:hover{border-color:#1a73e8;box-shadow:0 2px 12px rgba(26,115,232,.15)}
+.project-card .project-name{font-size:16px;font-weight:700}
+.project-card .project-meta{font-size:12px;color:#888;margin-top:6px;display:flex;gap:16px;flex-wrap:wrap}
+.project-progress{margin-top:12px}
+.project-progress .progress-text{font-size:12px;color:#888;margin-bottom:4px;display:flex;justify-content:space-between}
+/* Step row */
+.step-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #e8e8e8;border-radius:8px;margin-bottom:8px;background:#fafafa}
+.step-row .step-num{width:28px;height:28px;border-radius:50%;background:#1a73e8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.step-row .step-info{flex:1;min-width:0}
+.step-row .step-name{font-weight:600;font-size:13px}
+.step-row .step-basis{font-size:11px;color:#999;margin-top:2px}
+.step-row .step-input{width:70px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:14px;font-weight:700;text-align:center;color:#1a73e8}
+.step-row .step-input:focus{border-color:#1a73e8;outline:none}
+.step-row .step-unit{font-size:12px;color:#888;flex-shrink:0}
+.step-row.zero-days{opacity:.5}
+.total-bar{background:#1a73e8;color:#fff;padding:14px 20px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-weight:600;margin-top:12px}
+/* 병렬 구간 박스 */
+.pbox{border:2px solid #c8d6e5;border-radius:12px;margin:20px 0;overflow:hidden}
+.pbox-header{background:linear-gradient(90deg,#e8f0fe,#f3e8fd);padding:12px 16px;font-size:14px;font-weight:700;color:#1a73e8;display:flex;align-items:center;gap:8px;border-bottom:2px solid #c8d6e5}
+.pbox-tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0}
+.pbox-track{padding:14px;border-right:1px solid #e8e8e8}
+.pbox-track:last-child{border-right:none}
+.pbox-track-title{font-size:12px;font-weight:700;padding:4px 10px;border-radius:4px;margin-bottom:10px;display:inline-block}
+.pbox-track-title.tt-blue{background:#e3f2fd;color:#1565c0}
+.pbox-track-title.tt-orange{background:#fff3e0;color:#e65100}
+.pbox-track-title.tt-purple{background:#f3e5f5;color:#6a1b9a}
+.pbox-track .step-row{margin-bottom:6px;padding:8px 10px;font-size:12px}
+.pbox-track .step-row .step-num{width:22px;height:22px;font-size:10px}
+.pbox-track .step-row .step-input{width:56px;font-size:13px;padding:4px 6px}
+.pbox-track-sum{font-size:12px;font-weight:600;color:#555;margin-top:8px;padding-top:8px;border-top:1px dashed #ddd;text-align:right}
+.pbox-footer{background:#f0f4f8;padding:10px 16px;font-size:12px;color:#555;text-align:center;border-top:2px solid #c8d6e5}
+.pbox-footer strong{color:#1a73e8}
+/* 트랙 배지 (결과 테이블용) */
+.track-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.tb-inspect,.tb-inspect2{background:#e3f2fd;color:#1565c0}
+.tb-stability{background:#fff3e0;color:#e65100}
+.tb-design,.tb-design2{background:#f3e5f5;color:#6a1b9a}
+/* AI 분석 */
+.ai-card{background:linear-gradient(135deg,#faf5ff,#eef2ff);border:1px solid #c4b5fd;border-radius:12px;padding:24px;margin-bottom:20px}
+.ai-card .card-title{color:#6d28d9;display:flex;align-items:center;gap:8px}
+.ai-section{margin-bottom:16px}
+.ai-section-title{font-size:14px;font-weight:700;margin-bottom:8px;color:#333}
+.ai-tip{padding:12px 16px;background:#fff;border-radius:8px;margin-bottom:8px;border-left:4px solid #1a73e8}
+.ai-tip.critical{border-left-color:#ea4335;background:#fef7f7}
+.ai-tip.good{border-left-color:#0f9d58;background:#f7fef7}
+.ai-tip.warn{border-left-color:#f9ab00;background:#fffef7}
+.ai-tip-title{font-weight:700;font-size:13px;margin-bottom:4px}
+.ai-tip-body{font-size:12px;color:#555;line-height:1.7}
+.ai-tip-body ul{margin:4px 0 0 16px;padding:0}
+.ai-tip-body li{margin-bottom:2px}
+.ai-summary{background:#fff;border-radius:8px;padding:16px;border:1px solid #e0e0e0}
+.ai-summary table{font-size:13px}
+.ai-summary th{background:transparent;font-size:12px}
+/* Autocomplete */
+.ac-wrap{position:relative}
+.ac-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;max-height:240px;overflow-y:auto;z-index:50;display:none}
+.ac-list.show{display:block}
+.ac-item{padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0}
+.ac-item:hover,.ac-item.selected{background:#e3f2fd}
+.ac-item .ac-sub{font-size:11px;color:#888}
+</style>
+</head>
+<body>
+<div class="nav">
+<div class="nav-inner">
+<div class="nav-logo">OEM 스케줄러<span>식품 신제품 개발 관리</span></div>
+<div class="nav-tabs">
+<div class="nav-tab active" onclick="switchTab('schedule')">생산일정 계산기</div>
+<div class="nav-tab" onclick="switchTab('checklist')">개발 체크리스트</div>
+<div class="nav-tab" onclick="switchTab('manufacturer')">제조사 검색</div>
+<div class="nav-tab" onclick="switchTab('projects')">프로젝트 관리</div>
+</div>
+</div>
+</div>
+<div class="container">
+<!-- TAB: 생산일정 계산기 -->
+<div class="tab-content active" id="tab-schedule">
+<div class="card">
+<div class="card-title">역산 생산일정 계산기</div>
+<div class="alert alert-info">출시 희망일 기준으로 각 단계별 시작일을 역산합니다. 각 단계의 <strong>소요일수를 직접 입력</strong>하세요. 해당 없는 단계는 0으로 설정하면 건너뜁니다.</div>
+<div class="grid-2">
+<div>
+<div class="form-group">
+<label>제품 유형</label>
+<select id="productType" onchange="renderStepInputs()">
+<option value="health">건강기능식품 (고시형 원료)</option>
+<option value="health_individual">건강기능식품 (개별인정형 원료)</option>
+<option value="general">일반식품</option>
+</select>
+</div>
+<div class="form-group">
+<label>제형</label>
+<select id="productForm">
+<option value="tablet">정제 (Tablet)</option>
+<option value="hard_capsule">경질캡슐 (Hard Capsule)</option>
+<option value="soft_capsule">연질캡슐 (Soft Capsule)</option>
+<option value="powder">분말/과립 (Powder)</option>
+<option value="liquid">액상 (Liquid)</option>
+<option value="jelly">젤리/구미 (Gummy)</option>
+<option value="stick">스틱 (Stick)</option>
+<option value="film">필름형 (Film)</option>
+<option value="dual">이중제형 (Dual)</option>
+</select>
+</div>
+</div>
+<div>
+<div class="form-group">
+<label>출시 희망일 (목표일)</label>
+<input type="date" id="targetDate"/>
+</div>
+<div class="form-group">
+<label>생산 수량</label>
+<input type="number" id="productionQty" placeholder="예: 10000" value="10000"/>
+</div>
+</div>
+</div>
+</div>
+<div class="card">
+<div class="card-title">단계별 소요일수 입력</div>
+<div id="stepInputs"></div>
+<div class="total-bar">
+<span>총 소요일수</span>
+<span id="totalDaysDisplay">0일 (0주)</span>
+</div>
+<div class="btn-group" style="margin-top:16px;">
+<button class="btn btn-primary" onclick="calculateSchedule()">일정 계산하기</button>
+<button class="btn btn-success" onclick="aiAnalyze()" style="background:#6d28d9;">AI 일정 분석</button>
+<button class="btn btn-secondary" onclick="resetAll()">초기화</button>
+</div>
+</div>
+<div class="card" id="resultCard" style="display:none;">
+<div class="card-title">계산 결과</div>
+<div id="scheduleResult"></div>
+</div>
+<div class="card" id="ganttCard" style="display:none;">
+<div class="card-title">간트 차트</div>
+<div class="gantt-container" id="ganttChart"></div>
+</div>
+<div class="card" id="timelineCard" style="display:none;">
+<div class="card-title">단계별 타임라인</div>
+<div class="timeline" id="timelineView"></div>
+</div>
+<div class="ai-card" id="aiCard" style="display:none;">
+<div class="card-title">AI 일정 분석</div>
+<div id="aiResult"></div>
+</div>
+</div>
+<!-- TAB: 개발 체크리스트 -->
+<div class="tab-content" id="tab-checklist">
+<div class="form-group" style="margin-bottom:20px;">
+<select id="checklistType" onchange="renderChecklist()" style="max-width:300px;">
+<option value="health">건강기능식품 체크리스트</option>
+<option value="general">일반식품 체크리스트</option>
+</select>
+</div>
+<div class="grid-2">
+<div>
+<div class="card"><div class="card-title">1단계: 기획 및 컨셉</div><div id="checklist-phase1"></div></div>
+<div class="card"><div class="card-title">2단계: 원료 및 배합</div><div id="checklist-phase2"></div></div>
+<div class="card"><div class="card-title">3단계: 시제품 및 검사</div><div id="checklist-phase3"></div></div>
+</div>
+<div>
+<div class="card"><div class="card-title">4단계: 인허가 및 신고</div><div id="checklist-phase4"></div></div>
+<div class="card"><div class="card-title">5단계: 포장 및 디자인</div><div id="checklist-phase5"></div></div>
+<div class="card"><div class="card-title">6단계: 양산 및 출하</div><div id="checklist-phase6"></div></div>
+</div>
+</div>
+<div class="card">
+<div class="card-title">전체 진행률</div>
+<div class="project-progress">
+<div class="progress-text"><span id="checklistProgressText">0/0 완료</span><span id="checklistProgressPct">0%</span></div>
+<div class="progress-bar"><div class="progress-fill" id="checklistProgressBar" style="width:0%;background:#1a73e8;"></div></div>
+</div>
+</div>
+</div>
+<!-- TAB: 제조사 검색 -->
+<div class="tab-content" id="tab-manufacturer">
+<div class="card">
+<div class="card-title">식품안전나라 API 제조사 검색</div>
+<div class="alert alert-info">식품안전나라 OpenAPI를 활용하여 건강기능식품/일반식품 OEM 제조업체를 검색합니다. (제약사 제외)</div>
+<div class="inner-tabs">
+<div class="inner-tab active" onclick="switchSearchTab('health_mfr')">건강기능식품 (C003)</div>
+<div class="inner-tab" onclick="switchSearchTab('general_mfr')">일반식품 (I1250)</div>
+<div class="inner-tab" onclick="switchSearchTab('haccp_mfr')">HACCP 인증업소</div>
+</div>
+<div class="grid-2" style="margin-bottom:16px;">
+<div class="form-group ac-wrap" style="margin-bottom:0;">
+<label>업소명 (제조사명)</label>
+<input type="text" id="searchCompany" placeholder="제조사명 입력 (예: 서흥)" oninput="showMfrDropdown(this.value)" onfocus="showMfrDropdown(this.value)" autocomplete="off"/>
+<div class="ac-list" id="mfrDropdown"></div>
+</div>
+<div class="form-group" style="margin-bottom:0;">
+<label>제품명</label>
+<input type="text" id="searchProduct" placeholder="예: 비타민, 루테인, 프로바이오틱스"/>
+</div>
+</div>
+<div class="btn-group" style="margin-bottom:16px;">
+<button class="btn btn-primary" onclick="searchManufacturer()">검색</button>
+<button class="btn btn-secondary" onclick="clearSearch()">초기화</button>
+</div>
+<div id="searchResults"><p style="color:#888;font-size:14px;">제조사명을 입력하거나 목록에서 선택하세요.</p></div>
+</div>
+</div>
+<!-- TAB: 프로젝트 관리 -->
+<div class="tab-content" id="tab-projects">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+<h2 style="font-size:20px;font-weight:700;">프로젝트 관리</h2>
+<button class="btn btn-primary" onclick="openProjectModal()">+ 새 프로젝트</button>
+</div>
+<div id="projectList"><div class="card" style="text-align:center;color:#888;padding:60px;"><p>아직 프로젝트가 없습니다</p></div></div>
+</div>
+</div>
+<!-- Modals -->
+<div class="modal-overlay" id="projectModal">
+<div class="modal">
+<div class="modal-title">새 프로젝트 만들기</div>
+<div class="form-group"><label>프로젝트명</label><input type="text" id="projName" placeholder="예: 비타민C 1000 출시"/></div>
+<div class="form-group"><label>제품 유형</label><select id="projType"><option value="health">건강기능식품</option><option value="general">일반식품</option></select></div>
+<div class="form-group"><label>제형</label><select id="projForm"><option value="tablet">정제</option><option value="hard_capsule">경질캡슐</option><option value="soft_capsule">연질캡슐</option><option value="powder">분말/과립</option><option value="liquid">액상</option><option value="jelly">젤리/구미</option><option value="stick">스틱</option><option value="film">필름형</option><option value="dual">이중제형</option></select></div>
+<div class="form-group"><label>OEM 제조사</label><input type="text" id="projManufacturer" placeholder="예: 콜마비앤에이치"/></div>
+<div class="form-group"><label>출시 목표일</label><input type="date" id="projTargetDate"/></div>
+<div class="form-group"><label>메모</label><textarea id="projMemo" placeholder="메모" style="resize:vertical;min-height:60px;"></textarea></div>
+<div class="btn-group" style="justify-content:flex-end;margin-top:20px;">
+<button class="btn btn-secondary" onclick="closeProjectModal()">취소</button>
+<button class="btn btn-primary" onclick="saveProject()">저장</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="projectDetailModal">
+<div class="modal" style="max-width:800px;">
+<div id="projectDetailContent"></div>
+<div class="btn-group" style="justify-content:flex-end;margin-top:20px;">
+<button class="btn btn-danger btn-sm" onclick="deleteCurrentProject()">삭제</button>
+<button class="btn btn-secondary" onclick="closeProjectDetailModal()">닫기</button>
+</div>
+</div>
+</div>
+
+<script>
+const API_KEY='4c9bc13b8f484c678e8f';
+const API_BASE='https://openapi.foodsafetykorea.go.kr/api';
+let currentTab='schedule',currentSearchTab='health_mfr';
+let projects=JSON.parse(localStorage.getItem('oem_projects')||'[]');
+let checklists=JSON.parse(localStorage.getItem('oem_checklists')||'{}');
+let currentProjectId=null,searchPage=1;
+
+// OEM 제조사 목록 (검색바 드롭다운용)
+const oemList=[
+{name:'서흥',sub:'캡슐 전문 (경질/연질캡슐, 정제)'},
+{name:'서흥캡슐',sub:'서흥 계열사, 캡슐 전문'},
+{name:'콜마비앤에이치',sub:'건기식/화장품 OEM 대기업'},
+{name:'한국콜마',sub:'건기식/의약품 OEM'},
+{name:'노바렉스',sub:'건기식 ODM/OEM 전문'},
+{name:'코스맥스바이오',sub:'건기식 OEM, 이중제형 특화'},
+{name:'일동바이오사이언스',sub:'일동제약 계열, 건기식 OEM'},
+{name:'셀바이오텍',sub:'프로바이오틱스 전문 OEM'},
+{name:'뉴트리',sub:'건기식 원료/OEM'},
+{name:'에이치엘비생명과학',sub:'건기식 OEM'},
+{name:'한미양행',sub:'건기식/일반식품 OEM'},
+{name:'한국야쿠르트',sub:'유산균/음료 OEM'},
+{name:'풀무원건강생활',sub:'건기식/일반식품'},
+{name:'종근당건강',sub:'건기식 OEM/ODM'},
+{name:'대상웰라이프',sub:'건기식 OEM'},
+{name:'네추럴에프앤피',sub:'건기식 OEM 전문'},
+{name:'바이오파마',sub:'건기식 캡슐/정제 OEM'},
+{name:'에스디생명공학',sub:'건기식 OEM'},
+{name:'파마킹',sub:'건기식 OEM'},
+{name:'켐포트',sub:'건기식 분말/스틱 OEM'},
+{name:'유유제약',sub:'건기식/일반식품 OEM'},
+{name:'이지바이오',sub:'프로바이오틱스 OEM'},
+{name:'비엔엘바이오텍',sub:'건기식 OEM'},
+{name:'위드바이오',sub:'건기식 OEM'},
+{name:'에이스바이오텍',sub:'건기식/일반식품 OEM'},
+{name:'제이에이치바이오텍',sub:'건기식 젤리/구미 OEM'},
+{name:'한국인삼공사',sub:'홍삼/인삼 제품 OEM'},
+{name:'아미코젠',sub:'효소/발효 건기식 OEM'},
+{name:'비타민하우스',sub:'건기식 OEM/유통'},
+{name:'뉴트리원',sub:'건기식 ODM/OEM'},
+];
+
+// 트랙 색상 정의
+const trackMeta={
+'검사·인허가':{css:'tb-inspect',label:'검사·인허가'},
+'안정성':{css:'tb-stability',label:'안정성'},
+'디자인·광고':{css:'tb-design',label:'디자인·광고'},
+'검사·신고':{css:'tb-inspect2',label:'검사·신고'},
+'디자인':{css:'tb-design2',label:'디자인'}
+};
+const scheduleSteps={
+health:[
+{id:'concept',name:'제품 기획/컨셉 수립',defaultDays:7,group:1,track:null,basis:'시장조사 범위, 경쟁제품 수에 따라. 카테고리 확정 시 3일, 리서치부터 시 14일',desc:'타겟 소비자, 기능성 방향, 경쟁제품 분석'},
+{id:'ingredient',name:'기능성 원료 검토/선정',defaultDays:5,group:2,track:null,basis:'고시형 원료(95종) 중 선택. 원료 샘플 수급, 함량 비교에 따라 변동',desc:'고시형 원료 선택, 함량 결정, 원료사 견적'},
+{id:'formula',name:'배합 설계 (레시피)',defaultDays:7,group:3,track:null,basis:'OEM 연구원 배정 속도, 배합 복잡도(단일 vs 복합), 부형제 종류',desc:'배합비 설계, 부원료/부형제 선정'},
+{id:'sample',name:'시제품 제작/테스트',defaultDays:14,group:4,track:null,basis:'시제품 횟수(1~3회), 맛/안정성 보완, OEM 라인 일정',desc:'소량 시제품, 관능평가, 안정성 테스트'},
+{id:'nutrition',name:'영양성분 분석',defaultDays:7,group:5,track:'검사·인허가',basis:'공인기관(KFRI, SGS 등) 9대 영양소 분석. 일반 7~14일, 특급 3~5일',desc:'영양성분 표시용 9대 영양소 분석 의뢰'},
+{id:'standard',name:'기준규격 검사',defaultDays:7,group:5,track:'검사·인허가',basis:'성상/기능성분 정량/붕해/미생물(세균,대장균군)/중금속(납,카드뮴,수은,비소). 공인기관 7~14일',desc:'건기식 기준규격 적합 여부 확인'},
+{id:'approval',name:'품목제조신고',defaultDays:10,group:5,track:'검사·인허가',basis:'식약처 처리 + 서류 보완 여부. 서류 완벽 5일, 보완 시 14일',desc:'식약처: 제조방법설명서, 시험검사성적서 제출'},
+{id:'stability',name:'안정성 시험',defaultDays:30,group:5,track:'안정성',basis:'가속시험(40°C/75%RH) 최소 1개월~6개월. 장기보존은 실제 유통기한 기간',desc:'유통기한 설정 근거 (가속시험/장기보존시험)'},
+{id:'design',name:'포장 디자인/인쇄',defaultDays:14,group:5,track:'디자인·광고',basis:'시안 수정 횟수, 인쇄 방식(디지털/옵셋), 포장재 수급',desc:'법정 표시사항 포함 라벨/포장 디자인'},
+{id:'barcode',name:'바코드 발급',defaultDays:3,group:5,track:'디자인·광고',basis:'GS1 Korea 업체코드 보유 시 1일, 신규 5~7일',desc:'GS1 Korea GTIN 생성'},
+{id:'ad_review',name:'광고심의 (패키지/광고)',defaultDays:7,group:5,track:'디자인·광고',basis:'한국건강기능식품협회 사전심의 필수. 5~7영업일. 보완 시 +5일',desc:'건기식 패키지/광고 기능성 표현 사전심의'},
+{id:'production',name:'양산 (GMP 공장)',defaultDays:10,group:6,track:null,basis:'수량, OEM 공장 라인 스케줄, 원료 입고 리드타임',desc:'GMP/HACCP 인증 공장 본생산'},
+{id:'finished_qc',name:'완제품 검사 (출하검사)',defaultDays:7,group:7,track:null,basis:'양산 후 기준규격 전항목 재검사. 공인기관 위탁 시 7~14일',desc:'완제품 기준규격 전항목 검사, 적합 시 출하'},
+{id:'ship',name:'출하 및 입고',defaultDays:3,group:8,track:null,basis:'출하검사 적합 후 물류센터/창고 입고 리드타임',desc:'출하검사 통과 후 물류 배송'},
+],
+health_individual:[
+{id:'concept',name:'제품 기획/컨셉 수립',defaultDays:7,group:1,track:null,basis:'시장조사 범위에 따라 결정',desc:'타겟 소비자, 기능성 방향, 경쟁제품 분석'},
+{id:'ingredient',name:'개별인정형 원료 인정 신청',defaultDays:120,group:2,track:null,basis:'식약처 심사: 신규 120일, 기능성 추가 60일. 보완 시 180일+',desc:'식약처 개별인정 심사 + 임상시험 자료'},
+{id:'formula',name:'배합 설계 (레시피)',defaultDays:7,group:3,track:null,basis:'OEM 연구원 배정, 배합 복잡도',desc:'OEM 연구원 배합비 설계'},
+{id:'sample',name:'시제품 제작/테스트',defaultDays:14,group:4,track:null,basis:'시제품 횟수, 임상결과 반영 보완',desc:'소량 시제품, 임상시험 결과 반영'},
+{id:'nutrition',name:'영양성분 분석',defaultDays:7,group:5,track:'검사·인허가',basis:'공인기관 9대 영양소 분석',desc:'영양성분 표시용 분석'},
+{id:'standard',name:'기준규격 검사',defaultDays:7,group:5,track:'검사·인허가',basis:'성상/기능성분 정량/미생물/중금속. 공인기관 7~14일',desc:'건기식 기준규격 적합 확인'},
+{id:'approval',name:'품목제조신고',defaultDays:10,group:5,track:'검사·인허가',basis:'식약처 처리 + 개별인정형 서류 추가',desc:'식약처 + 개별인정 서류'},
+{id:'stability',name:'안정성 시험',defaultDays:30,group:5,track:'안정성',basis:'가속시험(40°C/75%RH) 또는 장기보존',desc:'유통기한 설정 근거'},
+{id:'design',name:'포장 디자인/인쇄',defaultDays:14,group:5,track:'디자인·광고',basis:'수정 횟수, 포장재 수급',desc:'법정 표시사항 포함 디자인'},
+{id:'barcode',name:'바코드 발급',defaultDays:3,group:5,track:'디자인·광고',basis:'GS1 Korea 업체코드 보유 여부',desc:'GS1 Korea GTIN'},
+{id:'ad_review',name:'광고심의 (패키지/광고)',defaultDays:7,group:5,track:'디자인·광고',basis:'한국건강기능식품협회 사전심의. 개별인정형은 더 엄격',desc:'패키지/광고 기능성 표현 심의'},
+{id:'production',name:'양산 (GMP 공장)',defaultDays:10,group:6,track:null,basis:'수량, 공장 라인 일정',desc:'GMP/HACCP 공장 본생산'},
+{id:'finished_qc',name:'완제품 검사 (출하검사)',defaultDays:7,group:7,track:null,basis:'기준규격 전항목 재검사',desc:'완제품 검사'},
+{id:'ship',name:'출하 및 입고',defaultDays:3,group:8,track:null,basis:'물류 리드타임',desc:'출하 후 배송'},
+],
+general:[
+{id:'concept',name:'제품 기획/컨셉 수립',defaultDays:5,group:1,track:null,basis:'시장조사 범위, 컨셉 확정 여부',desc:'제품 유형, 타겟 시장, 맛/형태 결정'},
+{id:'ingredient',name:'레시피 개발/원료 소싱',defaultDays:7,group:2,track:null,basis:'원재료 수급 난이도, 수입 원료, 레시피 복잡도',desc:'원재료 선정, 배합비 설계, 공급업체 확보'},
+{id:'sample',name:'시제품 제작/테스트',defaultDays:7,group:3,track:null,basis:'시제품 횟수, 관능평가 보완, 보존성 테스트',desc:'소량 생산, 관능평가, 보존성 테스트'},
+{id:'nutrition',name:'영양성분 분석',defaultDays:7,group:4,track:'검사·신고',basis:'공인기관 9대 영양소 분석. 2023.7.1부터 신규품목 의무',desc:'영양성분 표시용 분석 의뢰'},
+{id:'report',name:'품목제조보고',defaultDays:2,group:4,track:'검사·신고',basis:'시군구청 처리속도, 서류 준비 상태',desc:'관할 시/군/구청 보고'},
+{id:'stability',name:'안정성/보존성 시험',defaultDays:14,group:4,track:'안정성',basis:'소비기한 설정 근거. 가속시험 또는 유사제품 참고',desc:'소비기한 설정을 위한 보존성 테스트'},
+{id:'design',name:'포장 디자인/인쇄',defaultDays:10,group:4,track:'디자인',basis:'수정, 인쇄 방식, 포장재 수급',desc:'식품표시기준 라벨, 포장재 선정'},
+{id:'barcode',name:'바코드 발급',defaultDays:3,group:4,track:'디자인',basis:'GS1 Korea 업체코드 보유 여부',desc:'GS1 Korea 바코드'},
+{id:'production',name:'양산 (HACCP 공장)',defaultDays:7,group:5,track:null,basis:'수량, HACCP 공장 라인, 원료 입고',desc:'HACCP 공장 제조'},
+{id:'self_qc',name:'자가품질검사',defaultDays:5,group:6,track:null,basis:'법적 의무. 미생물(세균수/대장균군)/이물/식품첨가물. 자체 또는 위탁',desc:'법적 의무 자가품질검사'},
+{id:'ship',name:'출하 및 입고',defaultDays:2,group:7,track:null,basis:'포장 완료, 물류 준비 상태',desc:'검사 적합 후 출고'},
+]};
+
+const checklistData={
+health:{
+phase1:[{title:'타겟 소비자층 정의',desc:'연령, 성별, 건강 고민 등'},{title:'경쟁제품 분석',desc:'시장 내 유사 제품 가격/성분/마케팅'},{title:'기능성 방향 결정',desc:'면역, 피로, 눈건강, 장건강 등'},{title:'제형 결정',desc:'정제, 캡슐, 분말, 젤리, 액상, 스틱 등'},{title:'목표 가격대 설정',desc:'원가율 및 시장가 기반 소비자가'},{title:'브랜드명/제품명 결정',desc:'상표 등록 가능 여부 확인'}],
+phase2:[{title:'기능성 원료 유형 결정',desc:'고시형(95종) vs 개별인정형'},{title:'주원료 선정 및 함량 결정',desc:'일일섭취량 기준 충족'},{title:'부원료/부형제 선정',desc:'맛, 안정성, 제형 적합성'},{title:'원료 공급업체 확보',desc:'원료 규격서, 시험성적서 확보'},{title:'배합비 설계 완료',desc:'OEM 연구원 협의 최종 확정'},{title:'원가 계산',desc:'원료비+제조비+포장비 산출'}],
+phase3:[{title:'시제품 제작 의뢰',desc:'OEM 업체 소량 시제품'},{title:'관능평가 (맛/향/색)',desc:'맛, 향, 색상, 질감 평가'},{title:'영양성분 분석 의뢰',desc:'공인기관 9대 영양소 분석 (열량/탄수화물/당류/단백질/지방 등)'},{title:'기능성분 정량분석',desc:'기능성분 함량 분석 (KFRI, SGS, KTR 등)'},{title:'안정성 시험 (가속/장기보존)',desc:'유통기한 근거: 가속시험(40°C/75%RH) 또는 장기보존'},{title:'기준규격 검사',desc:'성상/기능성분함량/붕해/미생물(세균,대장균군)/중금속(납,카드뮴,수은,비소)'},{title:'배합 보완/확정',desc:'테스트 결과 반영 최종 확정'}],
+phase4:[{title:'유통전문판매업 신고',desc:'관할 시군구청 (교육필증 4시간)'},{title:'제조방법설명서 작성',desc:'원료 입고~출하 전 공정 기록'},{title:'시험검사성적서 확보',desc:'기준규격 전항목 적합 성적서'},{title:'유통기한 설정 사유서',desc:'안정성 시험 근거 자료'},{title:'품목제조신고서 제출',desc:'식약처 온라인 제출'},{title:'품목제조신고 완료',desc:'신고번호 수령 확인'}],
+phase5:[{title:'법정 필수표시사항 확인',desc:'건기식 마크, 기능성분, 섭취주의사항, 영양정보'},{title:'포장 디자인 시안 제작',desc:'표면/이면/측면 디자인'},{title:'표시사항 법적 검토',desc:'기능성 표현 적합성 (질병예방 금지)'},{title:'광고심의 신청',desc:'한국건강기능식품협회 사전심의 (패키지/광고). 심의수수료'},{title:'광고심의 통과/보완',desc:'부적합 시 수정 후 재심의'},{title:'바코드 발급 (GS1)',desc:'KAN코드 업체코드 신청 후 GTIN'},{title:'포장재 인쇄/제작',desc:'인쇄 교정 확인 후 양산 발주'}],
+phase6:[{title:'OEM 제조 계약서 체결',desc:'위탁생산 계약 조건 확정'},{title:'GMP 공장 양산 개시',desc:'원료 입고, 배합, 성형, 포장'},{title:'완제품 검사 (출하검사)',desc:'기준규격 전항목 재검사: 기능성분/미생물/중금속/성상/붕해'},{title:'포장 및 라벨링',desc:'최종 포장, 라벨 부착'},{title:'출하 검사 적합 판정',desc:'공인기관 성적서 적합 확인'},{title:'물류 배송 시작',desc:'창고 입고 및 배송 개시'}]
+},
+general:{
+phase1:[{title:'타겟 소비자층 정의',desc:'연령, 성별, 라이프스타일'},{title:'경쟁제품 분석',desc:'유사 제품 분석'},{title:'제품 유형/카테고리 결정',desc:'과자류, 음료, 즉석식품 등'},{title:'맛/향미 방향 결정',desc:'핵심 맛 프로필'},{title:'목표 가격대 설정',desc:'유통채널별 가격 전략'},{title:'브랜드명/제품명 결정',desc:'상표 등록 확인'}],
+phase2:[{title:'주원재료 선정',desc:'핵심 원재료 및 규격'},{title:'부재료/첨가물 선정',desc:'향료, 감미료, 보존료 등'},{title:'원료 공급업체 확보',desc:'공급 안정성 확인'},{title:'배합비 설계',desc:'레시피 개발 최적화'},{title:'알레르기 유발물질 확인',desc:'22종 알레르기 유발물질 점검'},{title:'원가 계산',desc:'원료비+제조비+포장비'}],
+phase3:[{title:'시제품 제작',desc:'OEM 업체 소량 시제품'},{title:'관능평가',desc:'맛, 향, 색, 질감 종합'},{title:'영양성분 분석 의뢰',desc:'공인기관 9대 영양소 (2023.7.1부터 의무)'},{title:'보존성/안정성 테스트',desc:'소비기한 설정 근거'},{title:'레시피 확정',desc:'최종 배합비 확정'}],
+phase4:[{title:'제조방법설명서 작성',desc:'전 공정 기록'},{title:'소비기한 설정 사유서',desc:'안정성 시험 근거'},{title:'영양성분 정보 등록',desc:'식품안전나라 DB 등록 (의무)'},{title:'품목제조보고',desc:'관할 시군구청 (생산 후 7일 이내)'},{title:'자가품질검사 계획 수립',desc:'법적 의무: 주기(연1회+), 항목(미생물/이물/첨가물)'}],
+phase5:[{title:'식품표시기준 확인',desc:'제품명, 식품유형, 영양성분, 알레르기 등'},{title:'포장 디자인 시안',desc:'표면/이면 디자인'},{title:'알레르기 표시 확인',desc:'22종 알레르기 유발물질'},{title:'바코드 발급',desc:'GS1 Korea KAN코드'},{title:'포장재 인쇄/제작',desc:'교정 확인 후 양산'}],
+phase6:[{title:'OEM 계약서 체결',desc:'위탁생산 계약'},{title:'HACCP 공장 양산',desc:'본생산 개시'},{title:'자가품질검사 실시',desc:'법적 의무: 미생물/이물/식품첨가물 검사'},{title:'포장/라벨링 완료',desc:'최종 포장'},{title:'자가품질검사 적합 확인',desc:'성적서 적합 판정 후 출하'},{title:'출하 및 물류 배송',desc:'창고 입고 및 배송 개시'}]
+}};
+
+// TAB
+function switchTab(t){currentTab=t;const tabs=['schedule','checklist','manufacturer','projects'];document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',tabs[i]===t));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');if(t==='checklist')renderChecklist();if(t==='projects')renderProjects();if(t==='schedule')renderStepInputs()}
+function switchSearchTab(t){currentSearchTab=t;document.querySelectorAll('#tab-manufacturer .inner-tab').forEach((el,i)=>{const tabs=['health_mfr','general_mfr','haccp_mfr'];el.classList.toggle('active',tabs[i]===t)})}
+
+// 그룹 분석: 병렬 그룹 식별
+function analyzeGroups(steps){
+const gmap=new Map();
+steps.forEach(s=>{if(!gmap.has(s.group))gmap.set(s.group,new Set());gmap.get(s.group).add(s.track||'main')});
+const parallel=new Set();
+gmap.forEach((tracks,g)=>{if(tracks.size>1)parallel.add(g)});
+return parallel
+}
+
+// 트랙별 CSS 클래스
+const trackCss={'검사·인허가':'tt-blue','안정성':'tt-orange','디자인·광고':'tt-purple','검사·신고':'tt-blue','디자인':'tt-purple'};
+
+// STEP INPUTS (순차=리스트, 병렬=3열 카드)
+function renderStepInputs(){
+const type=document.getElementById('productType').value;
+const steps=scheduleSteps[type];
+const parallel=analyzeGroups(steps);
+// 그룹 순서대로 정리
+const groupOrder=[];const groupMap=new Map();
+steps.forEach(s=>{
+if(!groupMap.has(s.group)){groupMap.set(s.group,{steps:[],tracks:new Map(),isP:parallel.has(s.group)});groupOrder.push(s.group)}
+const g=groupMap.get(s.group);g.steps.push(s);
+const t=s.track||'main';if(!g.tracks.has(t))g.tracks.set(t,[]);g.tracks.get(t).push(s)
+});
+let html='',num=1;
+groupOrder.forEach(gk=>{
+const g=groupMap.get(gk);
+if(!g.isP){
+// 순차 단계: 기존 리스트
+g.steps.forEach(s=>{
+html+=`<div class="step-row${s.defaultDays===0?' zero-days':''}" id="row_${s.id}">
+<div class="step-num">${num++}</div>
+<div class="step-info"><div class="step-name">${s.name}</div><div class="step-basis">${s.basis}</div></div>
+<input type="number" class="step-input" id="input_${s.id}" min="0" max="365" value="${s.defaultDays}" onchange="onStepChange('${s.id}')" oninput="onStepChange('${s.id}')">
+<div class="step-unit">일</div></div>`})
+}else{
+// 병렬 구간: 카드 3열
+html+=`<div class="pbox"><div class="pbox-header">&#8644; 동시 진행 구간 — 아래 트랙들이 동시에 시작됩니다</div><div class="pbox-tracks">`;
+g.tracks.forEach((tSteps,tName)=>{
+if(tName==='main')return;
+const css=trackCss[tName]||'tt-blue';
+html+=`<div class="pbox-track"><div class="pbox-track-title ${css}">${tName}</div>`;
+tSteps.forEach(s=>{
+html+=`<div class="step-row${s.defaultDays===0?' zero-days':''}" id="row_${s.id}">
+<div class="step-num">${num++}</div>
+<div class="step-info"><div class="step-name">${s.name}</div><div class="step-basis" style="font-size:10px">${s.basis}</div></div>
+<input type="number" class="step-input" id="input_${s.id}" min="0" max="365" value="${s.defaultDays}" onchange="onStepChange('${s.id}')" oninput="onStepChange('${s.id}')">
+<div class="step-unit">일</div></div>`});
+html+=`<div class="pbox-track-sum" id="tracksum_${gk}_${tName}">소계: ${tSteps.reduce((a,s)=>a+s.defaultDays,0)}일</div></div>`
+});
+html+=`</div><div class="pbox-footer" id="pbox-footer-${gk}">가장 긴 트랙 기준으로 다음 단계 진행</div></div>`
+}
+});
+document.getElementById('stepInputs').innerHTML=html;
+updateTotalDisplay();updateParallelFooters()
+}
+function updateParallelFooters(){
+const type=document.getElementById('productType').value;
+const steps=scheduleSteps[type];
+const parallel=analyzeGroups(steps);
+const gmap=new Map();
+steps.forEach(s=>{
+if(!parallel.has(s.group))return;
+const t=s.track||'main';const days=parseInt(document.getElementById('input_'+s.id)?.value)||0;
+if(!gmap.has(s.group))gmap.set(s.group,new Map());
+const tm=gmap.get(s.group);tm.set(t,(tm.get(t)||0)+days);
+// 트랙 소계 업데이트
+const sumEl=document.getElementById(`tracksum_${s.group}_${t}`);
+if(sumEl)sumEl.textContent=`소계: ${tm.get(t)}일`
+});
+gmap.forEach((tm,g)=>{
+const maxT=Math.max(...tm.values(),0);
+let maxName='';tm.forEach((v,k)=>{if(v===maxT)maxName=k});
+const el=document.getElementById(`pbox-footer-${g}`);
+if(el)el.innerHTML=`<strong>${maxName}</strong> 트랙이 가장 김 (<strong>${maxT}일</strong>) — 이 기간 동안 나머지 트랙도 함께 진행`
+})
+}
+function onStepChange(id){
+const row=document.getElementById('row_'+id);
+const val=parseInt(document.getElementById('input_'+id).value)||0;
+row.classList.toggle('zero-days',val===0);
+updateTotalDisplay();updateParallelFooters()
+}
+function calcParallelTotal(steps){
+// 그룹별 실제 소요일 계산 (병렬 그룹은 max)
+const gmap=new Map();
+steps.forEach(s=>{
+const days=parseInt(document.getElementById('input_'+s.id)?.value)||0;
+const g=s.group;const t=s.track||'main';
+if(!gmap.has(g))gmap.set(g,new Map());
+const tmap=gmap.get(g);
+tmap.set(t,(tmap.get(t)||0)+days)
+});
+let total=0;
+gmap.forEach(tmap=>{total+=Math.max(...tmap.values(),0)});
+return total
+}
+function updateTotalDisplay(){
+const type=document.getElementById('productType').value;
+const steps=scheduleSteps[type];
+let seqTotal=0;
+steps.forEach(s=>{const el=document.getElementById('input_'+s.id);if(el)seqTotal+=parseInt(el.value)||0});
+const realTotal=calcParallelTotal(steps);
+const saved=seqTotal-realTotal;
+let txt=`${realTotal}일 (${(realTotal/7).toFixed(1)}주 / ${(realTotal/30).toFixed(1)}개월)`;
+if(saved>0)txt+=` | 병렬로 ${saved}일 단축`;
+document.getElementById('totalDaysDisplay').textContent=txt
+}
+
+// SCHEDULE CALCULATOR (병렬 트랙 지원)
+function calculateSchedule(){
+const type=document.getElementById('productType').value;
+const targetDateStr=document.getElementById('targetDate').value;
+if(!targetDateStr){alert('출시 희망일을 선택해주세요.');return}
+const targetDate=new Date(targetDateStr);
+const steps=scheduleSteps[type];
+const parallel=analyzeGroups(steps);
+
+// 그룹별로 정리
+const groupOrder=[];const groupMap=new Map();
+steps.forEach(s=>{
+const days=parseInt(document.getElementById('input_'+s.id)?.value)||0;
+if(!groupMap.has(s.group)){groupMap.set(s.group,{tracks:new Map(),isParallel:parallel.has(s.group)});groupOrder.push(s.group)}
+const gd=groupMap.get(s.group);const t=s.track||'main';
+if(!gd.tracks.has(t))gd.tracks.set(t,[]);
+gd.tracks.get(t).push({...s,days})
+});
+
+// 각 그룹 소요일 계산
+const groupDurations=new Map();
+groupOrder.forEach(g=>{
+const gd=groupMap.get(g);let maxTrack=0;
+gd.tracks.forEach((tSteps,tName)=>{
+const tSum=tSteps.reduce((a,s)=>a+s.days,0);
+if(tSum>maxTrack)maxTrack=tSum
+});
+groupDurations.set(g,maxTrack)
+});
+
+// 역산: 뒤에서부터 날짜 배정
+let currentEnd=new Date(targetDate);
+const allDated=[];// {step data + start/end/trackName}
+for(let gi=groupOrder.length-1;gi>=0;gi--){
+const g=groupOrder[gi];const gd=groupMap.get(g);const gDur=groupDurations.get(g);
+if(gDur===0){
+gd.tracks.forEach((tSteps,tName)=>tSteps.forEach(s=>allDated.unshift({...s,start:null,end:null,trackName:tName==='main'?null:tName})));
+continue
+}
+const groupEnd=new Date(currentEnd);
+const groupStart=new Date(currentEnd);groupStart.setDate(groupStart.getDate()-gDur);
+
+// 각 트랙 내 순차 배정 (groupStart부터 앞으로)
+gd.tracks.forEach((tSteps,tName)=>{
+let tCur=new Date(groupStart);
+const results=[];
+tSteps.forEach(s=>{
+if(s.days===0){results.push({...s,start:null,end:null,trackName:tName==='main'?null:tName});return}
+const sStart=new Date(tCur);const sEnd=new Date(tCur);sEnd.setDate(sEnd.getDate()+s.days);
+results.push({...s,start:sStart,end:sEnd,trackName:tName==='main'?null:tName});
+tCur=new Date(sEnd)
+});
+allDated.unshift(...results)
+});
+currentEnd=new Date(groupStart)
+}
+
+const activeDates=allDated.filter(d=>d.days>0);
+if(!activeDates.length){alert('최소 1개 단계에 일수를 입력해주세요.');return}
+const startDate=activeDates.reduce((min,d)=>d.start<min?d.start:min,activeDates[0].start);
+const totalDays=Math.round((targetDate-startDate)/(864e5));
+const seqTotal=steps.reduce((a,s)=>a+(parseInt(document.getElementById('input_'+s.id)?.value)||0),0);
+const saved=seqTotal-totalDays;
+const today=new Date();today.setHours(0,0,0,0);
+const daysFromNow=Math.round((startDate-today)/(864e5));
+const typeLabel=type==='health'?'건강기능식품 (고시형)':type==='health_individual'?'건강기능식품 (개별인정형)':'일반식품';
+let html=`<div class="alert ${daysFromNow<0?'alert-warning':'alert-success'}">${daysFromNow<0?`<strong>주의:</strong> 시작일이 이미 ${Math.abs(daysFromNow)}일 지났습니다.`:`<strong>시작일:</strong> ${fmt(startDate)} (${daysFromNow}일 후)`}</div>
+<table><tr><th>총 소요기간 (병렬 반영)</th><td><strong>${totalDays}일</strong> (${(totalDays/7).toFixed(1)}주 / ${(totalDays/30).toFixed(1)}개월)${saved>0?` <span class="badge badge-green">순차대비 ${saved}일 단축</span>`:''}</td></tr>
+<tr><th>순차 합산 시</th><td>${seqTotal}일 (${(seqTotal/7).toFixed(1)}주)</td></tr>
+<tr><th>시작일</th><td>${fmt(startDate)}</td></tr><tr><th>출시 목표일</th><td>${fmt(targetDate)}</td></tr>
+<tr><th>제품 유형</th><td>${typeLabel}</td></tr></table>
+<h4 style="margin-top:20px;margin-bottom:12px;">단계별 일정</h4>
+<table><tr><th>단계</th><th>트랙</th><th>시작일</th><th>종료일</th><th>소요</th><th>측정기준</th></tr>
+${activeDates.map(d=>{
+const tb=d.trackName&&trackMeta[d.trackName]?`<span class="track-badge ${trackMeta[d.trackName].css}">${trackMeta[d.trackName].label}</span>`:'<span style="color:#888;font-size:11px">순차</span>';
+return `<tr><td><strong>${d.name}</strong><br><span style="font-size:11px;color:#888">${d.desc}</span></td><td>${tb}</td><td>${fmt(d.start)}</td><td>${fmt(d.end)}</td><td><strong>${d.days}일</strong></td><td style="font-size:11px;color:#888;max-width:200px">${d.basis}</td></tr>`}).join('')}</table>`;
+document.getElementById('scheduleResult').innerHTML=html;
+document.getElementById('resultCard').style.display='block';
+renderGantt(activeDates,startDate,targetDate);renderTimeline(activeDates,today);
+document.getElementById('ganttCard').style.display='block';document.getElementById('timelineCard').style.display='block'
+}
+function renderGantt(dates,startDate,endDate){
+const totalDays=Math.round((endDate-startDate)/(864e5));if(totalDays<=0)return;
+const trackBarColors={'검사·인허가':'#1a73e8','안정성':'#f9ab00','디자인·광고':'#ab47bc','검사·신고':'#1a73e8','디자인':'#ab47bc'};
+const defaultColors=['#0f9d58','#00acc1','#ff7043','#8d6e63','#78909c','#ea4335'];
+let ci=0;
+let months=[];let d=new Date(startDate);while(d<=endDate){months.push({y:d.getFullYear(),m:d.getMonth()});d.setMonth(d.getMonth()+1)}
+document.getElementById('ganttChart').innerHTML=
+`<div class="gantt-months">${months.map(m=>`<div class="gantt-month">${m.y}.${String(m.m+1).padStart(2,'0')}</div>`).join('')}</div>`+
+dates.map(s=>{const off=Math.round((s.start-startDate)/(864e5));const l=off/totalDays*100;const w=Math.max(s.days/totalDays*100,2);
+const color=s.trackName&&trackBarColors[s.trackName]?trackBarColors[s.trackName]:defaultColors[ci++%defaultColors.length];
+const label=s.trackName?`${s.name}`:s.name;
+return `<div class="gantt-row"><div class="gantt-label">${label}</div><div class="gantt-bar-area"><div class="gantt-bar" style="left:${l}%;width:${w}%;background:${color}">${s.days}d</div></div></div>`}).join('')
+}
+function renderTimeline(dates,today){
+document.getElementById('timelineView').innerHTML=dates.map(d=>{let st='';if(today>d.end)st='completed';else if(today>=d.start&&today<=d.end)st='current';
+return `<div class="timeline-item ${st}"><div class="timeline-header">${d.name}</div><div class="timeline-date">${fmt(d.start)} ~ ${fmt(d.end)} (${d.days}일)</div><div class="timeline-desc">${d.desc}</div></div>`}).join('')
+}
+function resetAll(){document.getElementById('productType').value='health';document.getElementById('targetDate').value='';renderStepInputs();document.getElementById('resultCard').style.display='none';document.getElementById('ganttCard').style.display='none';document.getElementById('timelineCard').style.display='none';document.getElementById('aiCard').style.display='none'}
+
+// AI 일정 분석
+const stepAdvice={
+concept:{min:3,tips:['경쟁제품 분석 범위를 Top 3~5개로 좁히세요','기존 자사 제품 라인업과 연계하면 기획 시간 단축','컨셉이 이미 확정되어 있다면 0일로 설정 가능']},
+ingredient:{min:3,tips:['고시형 원료 중 이미 검증된 원료 사용 시 단축 가능','원료사에 미리 샘플 요청해두면 병행 가능','다빈도 사용 원료(비타민C, 프로바이오틱스 등)는 즉시 수급 가능']},
+formula:{min:3,tips:['OEM사 기존 레시피(stock formula) 활용하면 3일 이내 가능','단일 원료 제품은 배합 복잡도가 낮아 단축 가능','OEM 연구원 사전 미팅으로 배합 방향 잡아두세요']},
+sample:{min:5,tips:['시제품 횟수를 1회로 줄이면 대폭 단축 (맛/형태 확정 시)','OEM사 표준 제형 활용 시 시제품 없이 바로 양산 가능한 경우도','시제품과 영양성분 분석을 동시에 의뢰하세요']},
+nutrition:{min:5,tips:['특급 분석(3~5일) 의뢰하면 단축 가능 (추가 비용)','영양성분 분석과 기준규격 검사를 동일 기관에 동시 의뢰','OEM사 자체 분석 가능 여부 확인']},
+stability:{min:14,tips:['가속시험 1개월(최소)로 단축 — 단, 유통기한 설정 근거 약해질 수 있음','유사 제품 안정성 데이터가 있으면 활용 가능','OEM사가 동일 제형 안정성 데이터를 보유한 경우 기간 대폭 단축','안정성 시험은 가장 긴 병목이므로 시제품 완성 즉시 의뢰하세요']},
+standard:{min:5,tips:['특급 의뢰 시 5일 내 가능 (추가 비용)','영양성분 분석과 같은 기관에 동시 의뢰하면 효율적','OEM사 자체 품질검사실 활용 가능 여부 확인']},
+design:{min:7,tips:['디자인 시안을 1~2차 이내로 확정하면 단축','법정 표시사항 템플릿을 미리 준비하세요','디자인 외주 시 시제품 단계부터 동시 진행 가능']},
+barcode:{min:1,tips:['GS1 Korea 업체코드가 이미 있으면 1일 내 발급','신규 업체코드 신청은 5~7일 — 미리 신청해두세요','업체코드 발급과 디자인을 병행하세요']},
+ad_review:{min:5,tips:['한국건강기능식품협회 사전심의 절차 숙지 필수','기능성 표현을 고시형 기준 표현으로만 작성하면 1차 통과율 높음','보완 시 +5일이므로 처음부터 심의 기준에 맞춰 작성']},
+approval:{min:5,tips:['서류를 완벽하게 준비하면 5일 이내 가능','제조방법설명서, 시험검사성적서 미리 완비','식약처 온라인 제출 시 오류 없게 사전 점검']},
+production:{min:5,tips:['OEM 공장 라인 예약을 2~3주 전에 미리 하세요','원료 사전 입고로 양산 대기시간 제거','소량(5,000개 이하) 양산은 3~5일 가능']},
+finished_qc:{min:3,tips:['특급 검사 의뢰 시 3~5일 (추가 비용)','OEM사 자체 품질검사 후 위탁검사 병행하면 효율적','양산과 동시에 검사 일정 예약해두세요']},
+self_qc:{min:3,tips:['자체 검사실이 있으면 1~2일 가능','위탁 시 특급 의뢰 고려','양산 전 검사기관 일정 사전 예약']},
+ship:{min:1,tips:['물류 파트너를 미리 확정해두면 1~2일 가능','포장 완료 즉시 출하 가능하도록 물류 사전 조율']},
+report:{min:1,tips:['서류를 사전에 완비하면 1일 처리 가능','관할 시군구청 담당자에게 사전 문의']},
+};
+
+function aiAnalyze(){
+const type=document.getElementById('productType').value;
+const steps=scheduleSteps[type];
+const parallel=analyzeGroups(steps);
+const targetDateStr=document.getElementById('targetDate').value;
+
+// 각 단계 일수 수집
+const stepData=steps.map(s=>({...s,days:parseInt(document.getElementById('input_'+s.id)?.value)||0}));
+const realTotal=calcParallelTotal(steps);
+const seqTotal=stepData.reduce((a,s)=>a+s.days,0);
+
+// 그룹별 정보
+const gmap=new Map();
+stepData.forEach(s=>{
+const t=s.track||'main';
+if(!gmap.has(s.group))gmap.set(s.group,{tracks:new Map(),isP:parallel.has(s.group)});
+const tm=gmap.get(s.group).tracks;
+if(!tm.has(t))tm.set(t,{days:0,steps:[]});
+const td=tm.get(t);td.days+=s.days;td.steps.push(s)
+});
+
+// 크리티컬 패스 찾기 (병렬 그룹에서 가장 긴 트랙)
+let criticalPath=[];
+gmap.forEach((gd,g)=>{
+if(gd.isP){
+let maxD=0,maxT='';
+gd.tracks.forEach((td,t)=>{if(td.days>maxD){maxD=td.days;maxT=t}});
+gd.tracks.forEach((td,t)=>{
+if(t===maxT)td.steps.forEach(s=>{if(s.days>0)criticalPath.push({...s,isCritical:true})});
+})
+}else{
+gd.tracks.forEach(td=>td.steps.forEach(s=>{if(s.days>0)criticalPath.push({...s,isCritical:false})}))
+}
+});
+
+let html='';
+
+// 1. 요약
+html+=`<div class="ai-section"><div class="ai-section-title">1. 일정 요약</div><div class="ai-summary"><table>
+<tr><th>병렬 반영 총 일정</th><td><strong>${realTotal}일</strong> (${(realTotal/7).toFixed(1)}주)</td></tr>
+<tr><th>순차 합산 시</th><td>${seqTotal}일</td></tr>
+<tr><th>병렬 절약</th><td><strong>${seqTotal-realTotal}일</strong> 단축</td></tr>
+${targetDateStr?`<tr><th>목표일까지</th><td>${Math.round((new Date(targetDateStr)-new Date())/(864e5))}일 남음</td></tr>`:''}</table></div></div>`;
+
+// 2. 크리티컬 패스 (일정을 결정하는 핵심 경로)
+html+=`<div class="ai-section"><div class="ai-section-title">2. 크리티컬 패스 (일정을 결정하는 핵심 단계)</div>`;
+html+=`<div class="ai-tip"><div class="ai-tip-title">이 단계들이 전체 일정을 결정합니다</div><div class="ai-tip-body">아래 단계 중 하나라도 줄이면 전체 일정이 단축됩니다:<ul>`;
+criticalPath.forEach(s=>{
+html+=`<li><strong>${s.name}</strong>: ${s.days}일${s.isCritical?' (병렬 구간 병목)':''}</li>`
+});
+html+=`</ul>크리티컬 패스 합계: <strong>${criticalPath.reduce((a,s)=>a+s.days,0)}일</strong> = 실제 전체 일정</div></div></div>`;
+
+// 3. 단축 가능한 단계별 조언
+const longSteps=stepData.filter(s=>s.days>0).sort((a,b)=>b.days-a.days);
+html+=`<div class="ai-section"><div class="ai-section-title">3. 일정 단축 방법 (단계별 조언)</div>`;
+longSteps.forEach(s=>{
+const adv=stepAdvice[s.id];if(!adv)return;
+const canSave=s.days-adv.min;
+const cls=canSave>=7?'critical':canSave>=3?'warn':'good';
+const label=canSave>=7?'대폭 단축 가능':canSave>=3?'단축 여지 있음':'적정 수준';
+html+=`<div class="ai-tip ${cls}"><div class="ai-tip-title">${s.name}: ${s.days}일 → 최소 ${adv.min}일 가능 (${canSave>0?'-'+canSave+'일':label})</div><div class="ai-tip-body"><ul>`;
+adv.tips.forEach(t=>{html+=`<li>${t}</li>`});
+html+=`</ul></div></div>`
+});
+html+=`</div>`;
+
+// 4. 전략적 제안
+html+=`<div class="ai-section"><div class="ai-section-title">4. 전략적 제안</div>`;
+
+// 병렬 그룹의 비효율 체크
+gmap.forEach((gd,g)=>{
+if(!gd.isP)return;
+let maxD=0,maxT='';const trackInfo=[];
+gd.tracks.forEach((td,t)=>{trackInfo.push({name:t,days:td.days});if(td.days>maxD){maxD=td.days;maxT=t}});
+const waste=trackInfo.filter(t=>t.name!==maxT).map(t=>({name:t.name,idle:maxD-t.days}));
+if(waste.length){
+html+=`<div class="ai-tip warn"><div class="ai-tip-title">병렬 구간 최적화</div><div class="ai-tip-body">
+<strong>${maxT}</strong> 트랙(${maxD}일)이 병목입니다.<ul>`;
+waste.forEach(w=>{
+if(w.idle>0)html+=`<li><strong>${w.name}</strong> 트랙은 ${w.idle}일 여유 — ${maxT} 트랙을 줄이면 전체 일정 단축</li>`
+});
+html+=`</ul>${maxT} 트랙의 일수를 줄이는 것이 전체 일정 단축의 핵심입니다.</div></div>`
+}
+});
+
+// 목표일 분석
+if(targetDateStr){
+const daysLeft=Math.round((new Date(targetDateStr)-new Date())/(864e5));
+if(daysLeft<realTotal){
+const gap=realTotal-daysLeft;
+html+=`<div class="ai-tip critical"><div class="ai-tip-title">목표일 초과: ${gap}일 부족</div><div class="ai-tip-body">
+현재 설정으로는 목표일보다 <strong>${gap}일</strong> 늦어집니다. 다음을 고려하세요:<ul>
+<li>크리티컬 패스의 가장 긴 단계부터 우선 단축</li>
+<li>안정성 시험: 가속시험 기간 최소화 또는 유사제품 데이터 활용</li>
+<li>검사/분석: 특급 의뢰로 기간 단축 (비용 증가)</li>
+<li>디자인: 시안 확정 횟수 최소화, 템플릿 활용</li>
+<li>목표일 재조정 검토</li></ul></div></div>`
+}else{
+html+=`<div class="ai-tip good"><div class="ai-tip-title">목표일 달성 가능: ${daysLeft-realTotal}일 여유</div><div class="ai-tip-body">
+현재 설정으로 목표일까지 <strong>${daysLeft-realTotal}일</strong> 여유가 있습니다. 버퍼로 활용하거나, 시제품 테스트를 추가로 진행할 수 있습니다.</div></div>`
+}
+}
+
+// 빠른 단축 Top 3
+const quickWins=longSteps.filter(s=>stepAdvice[s.id]&&s.days-stepAdvice[s.id].min>=3)
+.map(s=>({...s,save:s.days-stepAdvice[s.id].min})).sort((a,b)=>b.save-a.save).slice(0,3);
+if(quickWins.length){
+const totalSavable=quickWins.reduce((a,s)=>a+s.save,0);
+html+=`<div class="ai-tip"><div class="ai-tip-title">빠른 단축 Top ${quickWins.length} (최대 ${totalSavable}일 절약 가능)</div><div class="ai-tip-body"><ul>`;
+quickWins.forEach((s,i)=>{
+html+=`<li><strong>${i+1}. ${s.name}</strong>: ${s.days}일 → ${stepAdvice[s.id].min}일 (${s.save}일 절약)</li>`
+});
+html+=`</ul></div></div>`
+}
+
+html+=`</div>`;
+
+document.getElementById('aiResult').innerHTML=html;
+document.getElementById('aiCard').style.display='block';
+document.getElementById('aiCard').scrollIntoView({behavior:'smooth'})
+}
+
+// CHECKLIST
+function renderChecklist(){
+const type=document.getElementById('checklistType').value;const data=checklistData[type];const saved=checklists[type]||{};
+for(let p=1;p<=6;p++){const items=data['phase'+p]||[];const c=document.getElementById('checklist-phase'+p);if(!c)continue;
+c.innerHTML=items.map((item,i)=>{const id=`${type}_phase${p}_${i}`;return `<div class="checklist-item"><input type="checkbox" id="${id}" ${saved[id]?'checked':''} onchange="toggleCL('${type}','${id}')"><label class="checklist-label" for="${id}"><div class="title">${item.title}</div><div class="desc">${item.desc}</div></label></div>`}).join('')}
+updateCLProgress(type)
+}
+function toggleCL(type,id){if(!checklists[type])checklists[type]={};checklists[type][id]=!checklists[type][id];localStorage.setItem('oem_checklists',JSON.stringify(checklists));updateCLProgress(type)}
+function updateCLProgress(type){const data=checklistData[type];let total=0,done=0;const saved=checklists[type]||{};
+for(let p=1;p<=6;p++){const items=data['phase'+p]||[];total+=items.length;items.forEach((_,i)=>{if(saved[`${type}_phase${p}_${i}`])done++})}
+const pct=total>0?Math.round(done/total*100):0;
+document.getElementById('checklistProgressText').textContent=`${done}/${total} 완료`;
+document.getElementById('checklistProgressPct').textContent=pct+'%';
+document.getElementById('checklistProgressBar').style.width=pct+'%'}
+
+// MANUFACTURER DROPDOWN
+function showMfrDropdown(val){
+const dd=document.getElementById('mfrDropdown');
+const q=val.toLowerCase().trim();
+const filtered=q?oemList.filter(m=>m.name.toLowerCase().includes(q)):oemList;
+if(!filtered.length){dd.classList.remove('show');return}
+dd.innerHTML=filtered.map(m=>`<div class="ac-item" onmousedown="pickMfr('${m.name}')"><strong>${m.name}</strong><div class="ac-sub">${m.sub}</div></div>`).join('');
+dd.classList.add('show')
+}
+function pickMfr(name){
+document.getElementById('searchCompany').value=name;
+document.getElementById('mfrDropdown').classList.remove('show');
+searchPage=1;searchManufacturer()
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))document.getElementById('mfrDropdown')?.classList.remove('show')});
+
+// MANUFACTURER SEARCH
+async function searchManufacturer(){
+const company=document.getElementById('searchCompany').value.trim();
+const product=document.getElementById('searchProduct').value.trim();
+if(!company&&!product){alert('업소명 또는 제품명을 입력해주세요.');return}
+const resultsDiv=document.getElementById('searchResults');
+resultsDiv.innerHTML='<div class="loading"><div class="spinner"></div><p style="margin-top:12px">검색 중...</p></div>';
+let serviceId;
+if(currentSearchTab==='health_mfr')serviceId='C003';
+else if(currentSearchTab==='general_mfr')serviceId='I1250';
+else serviceId='I0500';
+const start=(searchPage-1)*20+1,end=start+19;
+let pp='';
+if(company)pp+='/BSSH_NM='+encodeURIComponent(company);
+if(product&&serviceId!=='I0500')pp+='/PRDLST_NM='+encodeURIComponent(product);
+const url=`${API_BASE}/${API_KEY}/${serviceId}/json/${start}/${end}${pp}`;
+try{
+const res=await fetch(url);const data=await res.json();const sd=data[serviceId];
+if(!sd||sd.RESULT?.CODE!=='INFO-000'){resultsDiv.innerHTML=`<div class="alert alert-warning">${sd?.RESULT?.MSG||'데이터 없음'}</div>`;return}
+const rows=sd.row||[];const tc=parseInt(sd.total_count)||0;
+const filtered=rows.filter(r=>{const n=r.BSSH_NM||'';return !n.includes('제약')&&!n.includes('약품')});
+if(!filtered.length){resultsDiv.innerHTML='<div class="alert alert-warning">검색 결과 없음 (제약사 제외)</div>';return}
+let html=`<p style="font-size:13px;color:#888;margin-bottom:12px">총 ${tc}건 중 ${filtered.length}건 (제약사 제외)</p>`;
+if(currentSearchTab==='health_mfr'){
+html+='<div class="table-wrap"><table><tr><th>업소명</th><th>제품명</th><th>기능성</th><th>제형</th><th>원재료</th><th>신고일</th></tr>';
+filtered.forEach(r=>{html+=`<tr><td><strong>${r.BSSH_NM||'-'}</strong></td><td>${r.PRDLST_NM||'-'}</td><td style="max-width:200px;font-size:12px">${(r.PRIMARY_FNCLTY||'-').substring(0,100)}</td><td><span class="badge badge-blue">${r.PRDT_SHAP_CD_NM||r.SHAP||'-'}</span></td><td style="max-width:200px;font-size:11px">${(r.RAWMTRL_NM||'-').substring(0,80)}</td><td style="white-space:nowrap">${r.PRMS_DT||'-'}</td></tr>`});html+='</table></div>'
+}else if(currentSearchTab==='general_mfr'){
+html+='<div class="table-wrap"><table><tr><th>업소명</th><th>제품명</th><th>식품유형</th><th>업종</th><th>유통기한</th></tr>';
+filtered.forEach(r=>{html+=`<tr><td><strong>${r.BSSH_NM||'-'}</strong></td><td>${r.PRDLST_NM||'-'}</td><td><span class="badge badge-green">${r.PRDLST_DCNM||'-'}</span></td><td>${r.INDUTY_CD_NM||'-'}</td><td>${r.POG_DAYCNT||'-'}</td></tr>`});html+='</table></div>'
+}else{
+html+='<div class="table-wrap"><table><tr><th>업소명</th><th>소재지</th><th>업종</th><th>HACCP</th></tr>';
+filtered.forEach(r=>{html+=`<tr><td><strong>${r.BSSH_NM||'-'}</strong></td><td style="font-size:12px">${r.SITE_ADDR||r.ADDR||'-'}</td><td>${r.INDUTY_NM||r.INDUTY_CD_NM||'-'}</td><td><span class="badge badge-green">HACCP</span></td></tr>`});html+='</table></div>'
+}
+const tp=Math.ceil(tc/20);
+if(tp>1)html+=`<div style="margin-top:16px;text-align:center">${searchPage>1?`<button class="btn btn-sm btn-secondary" onclick="goPage(${searchPage-1})">이전</button> `:''}<span style="margin:0 12px;font-size:13px">${searchPage}/${tp}</span>${searchPage<tp?` <button class="btn btn-sm btn-secondary" onclick="goPage(${searchPage+1})">다음</button>`:''}</div>`;
+resultsDiv.innerHTML=html
+}catch(err){resultsDiv.innerHTML=`<div class="alert alert-warning">API 오류: ${err.message}<br><span style="font-size:12px">CORS로 로컬에서 제한될 수 있습니다.</span></div>`}
+}
+function goPage(p){searchPage=p;searchManufacturer()}
+function clearSearch(){document.getElementById('searchCompany').value='';document.getElementById('searchProduct').value='';searchPage=1;document.getElementById('searchResults').innerHTML='<p style="color:#888;font-size:14px">제조사명을 입력하거나 목록에서 선택하세요.</p>'}
+
+// PROJECTS
+function openProjectModal(){document.getElementById('projectModal').classList.add('show');const d=new Date();d.setMonth(d.getMonth()+2);document.getElementById('projTargetDate').value=d.toISOString().split('T')[0]}
+function closeProjectModal(){document.getElementById('projectModal').classList.remove('show')}
+function saveProject(){const name=document.getElementById('projName').value.trim();if(!name){alert('프로젝트명 입력');return}
+projects.push({id:Date.now().toString(),name,type:document.getElementById('projType').value,form:document.getElementById('projForm').value,manufacturer:document.getElementById('projManufacturer').value.trim(),targetDate:document.getElementById('projTargetDate').value,memo:document.getElementById('projMemo').value.trim(),createdAt:new Date().toISOString(),status:'active',checklist:{}});
+localStorage.setItem('oem_projects',JSON.stringify(projects));closeProjectModal();renderProjects();document.getElementById('projName').value='';document.getElementById('projManufacturer').value='';document.getElementById('projMemo').value=''}
+function renderProjects(){const c=document.getElementById('projectList');if(!projects.length){c.innerHTML='<div class="card" style="text-align:center;color:#888;padding:60px"><p>아직 프로젝트가 없습니다</p></div>';return}
+const fl={tablet:'정제',hard_capsule:'경질캡슐',soft_capsule:'연질캡슐',powder:'분말',liquid:'액상',jelly:'젤리',stick:'스틱',film:'필름형',dual:'이중제형'};
+c.innerHTML=projects.map(p=>{const tl=p.type==='health'?'건강기능식품':'일반식품';const cc=Object.values(p.checklist||{}).filter(Boolean).length;const ti=getTotalCI(p.type);const pct=ti>0?Math.round(cc/ti*100):0;const dl=Math.round((new Date(p.targetDate)-new Date())/(864e5));
+return `<div class="project-card" onclick="openPD('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="project-name">${p.name}</div><div class="project-meta"><span class="badge badge-blue">${tl}</span><span class="badge badge-purple">${fl[p.form]||p.form}</span>${p.manufacturer?`<span>제조사: ${p.manufacturer}</span>`:''}<span>목표: ${p.targetDate}</span></div></div><span class="badge ${dl<30?'badge-red':dl<60?'badge-orange':'badge-green'}">D${dl>0?'-'+dl:'+'+Math.abs(dl)}</span></div><div class="project-progress"><div class="progress-text"><span>진행률</span><span>${pct}% (${cc}/${ti})</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${pct>=80?'#0f9d58':pct>=40?'#f9ab00':'#1a73e8'}"></div></div></div></div>`}).join('')}
+function getTotalCI(type){const d=checklistData[type]||checklistData.health;let t=0;for(let p=1;p<=6;p++)t+=(d['phase'+p]||[]).length;return t}
+function openPD(id){currentProjectId=id;const p=projects.find(x=>x.id===id);if(!p)return;const tl=p.type==='health'?'건강기능식품':'일반식품';const d=checklistData[p.type]||checklistData.health;const pn=['','기획 및 컨셉','원료 및 배합','시제품 및 검사','인허가 및 신고','포장 및 디자인','양산 및 출하'];
+let ch='';for(let ph=1;ph<=6;ph++){const items=d['phase'+ph]||[];ch+=`<h4 style="margin:16px 0 8px">${ph}단계: ${pn[ph]}</h4>`;items.forEach((item,i)=>{const cid=`proj_${id}_phase${ph}_${i}`;ch+=`<div class="checklist-item"><input type="checkbox" id="${cid}" ${p.checklist?.[cid]?'checked':''} onchange="togglePC('${id}','${cid}')"><label class="checklist-label" for="${cid}"><div class="title">${item.title}</div><div class="desc">${item.desc}</div></label></div>`})}
+document.getElementById('projectDetailContent').innerHTML=`<div class="modal-title">${p.name}</div><div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap"><span class="badge badge-blue">${tl}</span>${p.manufacturer?`<span class="badge badge-gray">제조사: ${p.manufacturer}</span>`:''}<span class="badge badge-orange">목표: ${p.targetDate}</span></div>${p.memo?`<div class="alert alert-info">${p.memo}</div>`:''}<h3 style="margin-bottom:12px">개발 체크리스트</h3>${ch}`;
+document.getElementById('projectDetailModal').classList.add('show')}
+function togglePC(pid,cid){const p=projects.find(x=>x.id===pid);if(!p)return;if(!p.checklist)p.checklist={};p.checklist[cid]=!p.checklist[cid];localStorage.setItem('oem_projects',JSON.stringify(projects))}
+function closeProjectDetailModal(){document.getElementById('projectDetailModal').classList.remove('show');renderProjects()}
+function deleteCurrentProject(){if(!confirm('삭제?'))return;projects=projects.filter(p=>p.id!==currentProjectId);localStorage.setItem('oem_projects',JSON.stringify(projects));closeProjectDetailModal()}
+
+function fmt(d){return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`}
+
+document.addEventListener('DOMContentLoaded',()=>{const d=new Date();d.setMonth(d.getMonth()+2);document.getElementById('targetDate').value=d.toISOString().split('T')[0];renderChecklist();renderStepInputs()});
+</script>
+</body>
+</html>
