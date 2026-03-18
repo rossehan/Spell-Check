@@ -93,13 +93,18 @@ app.get('/api/opportunities', async (req, res) => {
         .select('*')
         .order('opportunity_score', { ascending: false })
         .limit(50);
-      if (error) throw error;
-      if (data && data.length > 0) return res.json(data);
+      if (error) {
+        console.error('[API] opportunities Supabase error:', error.message);
+      } else if (data && data.length > 0) {
+        return res.json(data);
+      } else {
+        console.log('[API] opportunities: Supabase 비어있음 → 데모 데이터 사용');
+      }
     } catch (err) {
-      console.error('[API] opportunities error:', err.message);
+      console.error('[API] opportunities catch error:', err.message);
     }
   }
-  res.json(DEMO_OPPORTUNITY_SCORES);
+  return res.json(DEMO_OPPORTUNITY_SCORES);
 });
 
 // Keyword Origins (골든타임)
@@ -111,13 +116,16 @@ app.get('/api/origins', async (req, res) => {
         .select('*')
         .order('analyzed_at', { ascending: false })
         .limit(30);
-      if (error) throw error;
-      if (data && data.length > 0) return res.json(data);
+      if (error) {
+        console.error('[API] origins Supabase error:', error.message);
+      } else if (data && data.length > 0) {
+        return res.json(data);
+      }
     } catch (err) {
-      console.error('[API] origins error:', err.message);
+      console.error('[API] origins catch error:', err.message);
     }
   }
-  res.json(DEMO_KEYWORD_ORIGINS);
+  return res.json(DEMO_KEYWORD_ORIGINS);
 });
 
 // Podcast Keywords
@@ -129,13 +137,16 @@ app.get('/api/podcasts', async (req, res) => {
         .select('*')
         .order('mentioned_date', { ascending: false })
         .limit(100);
-      if (error) throw error;
-      if (data && data.length > 0) return res.json(data);
+      if (error) {
+        console.error('[API] podcasts Supabase error:', error.message);
+      } else if (data && data.length > 0) {
+        return res.json(data);
+      }
     } catch (err) {
-      console.error('[API] podcasts error:', err.message);
+      console.error('[API] podcasts catch error:', err.message);
     }
   }
-  res.json(DEMO_PODCAST_KEYWORDS);
+  return res.json(DEMO_PODCAST_KEYWORDS);
 });
 
 // Google Trends
@@ -147,13 +158,16 @@ app.get('/api/trends', async (req, res) => {
         .select('*')
         .order('snapshot_date', { ascending: false })
         .limit(50);
-      if (error) throw error;
-      if (data && data.length > 0) return res.json(data);
+      if (error) {
+        console.error('[API] trends Supabase error:', error.message);
+      } else if (data && data.length > 0) {
+        return res.json(data);
+      }
     } catch (err) {
-      console.error('[API] trends error:', err.message);
+      console.error('[API] trends catch error:', err.message);
     }
   }
-  res.json(DEMO_GOOGLE_TRENDS);
+  return res.json(DEMO_GOOGLE_TRENDS);
 });
 
 // Facebook Ads
@@ -165,13 +179,16 @@ app.get('/api/ads', async (req, res) => {
         .select('*')
         .order('snapshot_date', { ascending: false })
         .limit(50);
-      if (error) throw error;
-      if (data && data.length > 0) return res.json(data);
+      if (error) {
+        console.error('[API] ads Supabase error:', error.message);
+      } else if (data && data.length > 0) {
+        return res.json(data);
+      }
     } catch (err) {
-      console.error('[API] ads error:', err.message);
+      console.error('[API] ads catch error:', err.message);
     }
   }
-  res.json([]);
+  return res.json([]);
 });
 
 // 서버 시작
