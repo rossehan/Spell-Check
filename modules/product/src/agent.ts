@@ -1,5 +1,6 @@
 // [TrendRadar] 메인 에이전트
 
+import 'dotenv/config';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import cron from 'node-cron';
 import type { CapabilityContext, AgentEvent } from './types/trendradar.js';
