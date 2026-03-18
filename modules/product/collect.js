@@ -66,7 +66,7 @@ async function resolveAllUUIDs() {
   for (const [key, inf] of Object.entries(INFLUENCERS)) {
     try {
       const safeName = inf.searchName.replace(/"/g, '\\"');
-      const result = await taddyQuery(`{ search(term: "${safeName}", filterForTypes: PODCASTSERIES, limitPerPage: 3) { podcastSeries { uuid name } } }`);
+      const result = await taddyQuery(`{ search(term: "${safeName}", filterForTypes: PODCASTSERIES, limitPerPage: 3) { searchId podcastSeries { uuid name } } }`);
       const podcasts = result?.data?.search?.podcastSeries ?? [];
       if (podcasts.length > 0) {
         inf.uuid = podcasts[0].uuid;
@@ -222,6 +222,13 @@ async function collectInstagramData() {
   const allKeywords = [...new Set([...uniqueKeywords, ...SEED_KEYWORDS])];
 
   log('INSTAGRAM', `${allKeywords.length}개 키워드 해시태그 조회 (주간 30개 제한 주의)`);
+
+  if (!process.env.INSTAGRAM_USER_ID) {
+    log('INSTAGRAM', '⚠️ INSTAGRAM_USER_ID가 설정되지 않았습니다. Instagram Business 계정 ID가 필요합니다.');
+    log('INSTAGRAM', '  설정 방법: Graph API Explorer에서 me/accounts?fields=instagram_business_account 조회');
+    log('INSTAGRAM', '=== Instagram 수집 완료: 0개 키워드 ===');
+    return { collected: 0 };
+  }
 
   const maxPerRun = 25; // 주간 한도 고려
   const batch = allKeywords.slice(0, maxPerRun);
