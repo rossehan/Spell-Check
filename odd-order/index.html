@@ -1,0 +1,3113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ODD 공구 발주서 자동화</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-populate@1.21.0/browser/xlsx-populate.min.js"></script>
+  <style>
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif;
+      background: #f5f7fa;
+      color: #1e1e2e;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ===== Header ===== */
+    .app-header {
+      background: #ffffff;
+      border-bottom: 1px solid #e8eaf0;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .app-header-inner {
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .app-logo {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 16px;
+      flex-shrink: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .app-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e1e2e;
+      letter-spacing: -0.3px;
+    }
+
+    .app-title span {
+      color: #4f46e5;
+    }
+
+    /* ===== Main Container ===== */
+    .main-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 24px 60px;
+    }
+
+    /* ===== Round Banner ===== */
+    #round-banner {
+      background: #ffffff;
+      border: 1.5px solid #e0e2ef;
+      border-radius: 16px;
+      padding: 18px 24px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(79,70,229,0.06);
+      transition: border-color 0.2s;
+    }
+
+    #round-banner.has-round {
+      border-color: #c7d2fe;
+      background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    }
+
+    .banner-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: #ede9fe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .banner-content {
+      flex: 1;
+    }
+
+    .banner-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #7c6fcd;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 2px;
+    }
+
+    .banner-round-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e1e2e;
+    }
+
+    .banner-round-name.empty {
+      font-size: 14px;
+      font-weight: 500;
+      color: #9ca3af;
+    }
+
+    .banner-meta {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    .banner-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #4f46e5;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+
+    .banner-badge.empty {
+      background: #e5e7eb;
+      color: #9ca3af;
+    }
+
+    /* ===== Tab Navigation ===== */
+    .tab-nav {
+      display: flex;
+      gap: 4px;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 6px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border: 1px solid #e8eaf0;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      flex: 1;
+      min-width: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 20px;
+      border: none;
+      background: transparent;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      background: #f5f3ff;
+      color: #4f46e5;
+    }
+
+    .tab-btn.active {
+      background: #4f46e5;
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(79,70,229,0.3);
+    }
+
+    .tab-btn .tab-icon {
+      font-size: 16px;
+    }
+
+    /* ===== Tab Content ===== */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ===== Card ===== */
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 28px 32px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      border: 1px solid #e8eaf0;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e1e2e;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .card-icon {
+      font-size: 20px;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 20px;
+    }
+
+    /* ===== Upload Area ===== */
+    .upload-area {
+      border: 2px dashed #c7d2fe;
+      border-radius: 12px;
+      padding: 36px 24px;
+      text-align: center;
+      background: #fafafe;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .upload-area:hover,
+    .upload-area.dragover {
+      border-color: #4f46e5;
+      background: #f0eeff;
+    }
+
+    .upload-area .upload-icon {
+      font-size: 36px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .upload-area p {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .upload-area p strong {
+      color: #4f46e5;
+    }
+
+    .upload-area .upload-hint {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    /* ===== Buttons ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      font-family: inherit;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: #4f46e5;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(79,70,229,0.25);
+    }
+
+    .btn-primary:hover {
+      background: #4338ca;
+      box-shadow: 0 4px 14px rgba(79,70,229,0.35);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      background: #c7d2fe;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .btn-success {
+      background: #059669;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(5,150,105,0.25);
+    }
+
+    .btn-success:hover {
+      background: #047857;
+      transform: translateY(-1px);
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: 13px;
+    }
+
+    /* ===== Table ===== */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid #e8eaf0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead tr {
+      background: #f8fafc;
+      border-bottom: 1.5px solid #e8eaf0;
+    }
+
+    thead th {
+      padding: 11px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #f1f3f8;
+      transition: background 0.12s;
+    }
+
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: #fafafe;
+    }
+
+    tbody td {
+      padding: 11px 16px;
+      color: #374151;
+      white-space: nowrap;
+    }
+
+    /* ===== Status Badge ===== */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-blue {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .badge-green {
+      background: #d1fae5;
+      color: #047857;
+    }
+
+    .badge-orange {
+      background: #ffedd5;
+      color: #c2410c;
+    }
+
+    .badge-gray {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    /* ===== Stats Grid ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 20px 22px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      border: 1px solid #e8eaf0;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #1e1e2e;
+      letter-spacing: -1px;
+      line-height: 1.1;
+    }
+
+    .stat-unit {
+      font-size: 14px;
+      font-weight: 600;
+      color: #9ca3af;
+      margin-left: 2px;
+    }
+
+    .stat-change {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    /* ===== Placeholder ===== */
+    .placeholder-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 24px;
+      color: #9ca3af;
+      text-align: center;
+    }
+
+    .placeholder-box .placeholder-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    .placeholder-box p {
+      font-size: 15px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
+    .placeholder-box span {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    /* ===== Divider ===== */
+    .divider {
+      border: none;
+      border-top: 1px solid #f1f3f8;
+      margin: 20px 0;
+    }
+
+    /* ===== Section Label ===== */
+    .section-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 12px;
+    }
+
+    /* ===== Toast ===== */
+    #toast-container {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08);
+      border-left: 4px solid #4f46e5;
+      min-width: 260px;
+      max-width: 360px;
+      pointer-events: auto;
+      animation: toastSlideIn 0.25s ease forwards;
+      font-size: 14px;
+      font-weight: 500;
+      color: #1e1e2e;
+    }
+
+    .toast.success { border-left-color: #059669; }
+    .toast.error   { border-left-color: #dc2626; }
+    .toast.warning { border-left-color: #d97706; }
+    .toast.info    { border-left-color: #4f46e5; }
+
+    .toast-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .toast-msg {
+      flex: 1;
+      line-height: 1.4;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #9ca3af;
+      font-size: 16px;
+      padding: 0;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .toast-close:hover {
+      color: #374151;
+    }
+
+    .toast.hide {
+      animation: toastSlideOut 0.22s ease forwards;
+    }
+
+    @keyframes toastSlideIn {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);   opacity: 1; }
+    }
+
+    @keyframes toastSlideOut {
+      from { transform: translateX(0);   opacity: 1; }
+      to   { transform: translateX(110%); opacity: 0; }
+    }
+
+    /* ===== Modal ===== */
+    #modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,15,30,0.45);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(3px);
+    }
+
+    #modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      animation: modalIn 0.22s ease;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e1e2e;
+      margin-bottom: 8px;
+    }
+
+    .modal-desc {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    @keyframes modalIn {
+      from { transform: scale(0.94) translateY(12px); opacity: 0; }
+      to   { transform: scale(1)    translateY(0);    opacity: 1; }
+    }
+
+    /* ===== Round Select (배너 내 드롭다운) ===== */
+    .round-select-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .round-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 10px center;
+      border: 1.5px solid #c7d2fe;
+      border-radius: 8px;
+      padding: 6px 28px 6px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #4f46e5;
+      cursor: pointer;
+      font-family: inherit;
+      max-width: 180px;
+      transition: border-color 0.15s;
+    }
+
+    .round-select:focus {
+      outline: none;
+      border-color: #4f46e5;
+    }
+
+    /* ===== Form Fields (모달 내) ===== */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    .form-label .required {
+      color: #dc2626;
+      margin-left: 2px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1e1e2e;
+      transition: border-color 0.15s;
+      background: #fafafa;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #4f46e5;
+      background: #ffffff;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ===== Personal Order Form ===== */
+    .personal-order-form .form-group {
+      margin-bottom: 12px;
+    }
+
+    .personal-order-form label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    .personal-order-form label .required {
+      color: #dc2626;
+      margin-left: 2px;
+    }
+
+    .personal-order-form input,
+    .personal-order-form select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1e1e2e;
+      background: #fafafa;
+      transition: border-color 0.15s;
+    }
+
+    .personal-order-form input:focus,
+    .personal-order-form select:focus {
+      outline: none;
+      border-color: #4f46e5;
+      background: #ffffff;
+    }
+
+    .personal-order-form .form-group-sm {
+      max-width: 100px;
+    }
+
+    .personal-order-form .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #4f46e5;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 7px;
+      border-radius: 11px;
+      margin-left: 8px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-outline {
+      background: #ffffff;
+      color: #6b7280;
+      border: 1.5px solid #e5e7eb;
+      padding: 9px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .btn-outline:hover {
+      border-color: #dc2626;
+      color: #dc2626;
+    }
+
+    /* ===== Fetch Orders Section ===== */
+    .fetch-orders-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .btn-lg {
+      padding: 14px 28px;
+      font-size: 16px;
+      border-radius: 12px;
+    }
+
+    .fetch-hint {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    .divider-or {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      color: #9ca3af;
+      font-size: 13px;
+    }
+
+    .divider-or::before,
+    .divider-or::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    .btn-delete {
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-delete:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    /* ===== No-round empty state (탭 내) ===== */
+    .no-round-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 56px 24px;
+      text-align: center;
+      gap: 12px;
+    }
+
+    .no-round-state .no-round-icon {
+      font-size: 44px;
+      opacity: 0.55;
+    }
+
+    .no-round-state p {
+      font-size: 15px;
+      font-weight: 600;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .no-round-state span {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    /* ===== Workflow Progress Indicator ===== */
+    .workflow-steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 28px;
+      padding: 20px 24px;
+      background: #ffffff;
+      border-radius: 14px;
+      border: 1px solid #e8eaf0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      overflow-x: auto;
+    }
+
+    .wf-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .wf-step-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+      background: #f3f4f6;
+      color: #9ca3af;
+      border: 2px solid #e5e7eb;
+      transition: all 0.2s;
+    }
+
+    .wf-step-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #9ca3af;
+      white-space: nowrap;
+      transition: color 0.2s;
+    }
+
+    .wf-step.active .wf-step-circle {
+      background: #4f46e5;
+      color: #ffffff;
+      border-color: #4f46e5;
+      box-shadow: 0 2px 8px rgba(79,70,229,0.35);
+    }
+
+    .wf-step.active .wf-step-label {
+      color: #4f46e5;
+    }
+
+    .wf-step.done .wf-step-circle {
+      background: #059669;
+      color: #ffffff;
+      border-color: #059669;
+    }
+
+    .wf-step.done .wf-step-label {
+      color: #059669;
+    }
+
+    .wf-arrow {
+      width: 32px;
+      height: 2px;
+      background: #e5e7eb;
+      flex-shrink: 0;
+      margin: 0 4px;
+      position: relative;
+    }
+
+    .wf-arrow::after {
+      content: '';
+      position: absolute;
+      right: -4px;
+      top: -3px;
+      width: 0;
+      height: 0;
+      border-left: 6px solid #e5e7eb;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+    }
+
+    .wf-arrow.done {
+      background: #059669;
+    }
+
+    .wf-arrow.done::after {
+      border-left-color: #059669;
+    }
+
+    /* ===== Mapping Failed Row ===== */
+    tbody tr.mapping-failed {
+      background: #fff5f5 !important;
+    }
+
+    tbody tr.mapping-failed td {
+      color: #dc2626;
+    }
+
+    .mapping-warn-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #fee2e2;
+      color: #dc2626;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* ===== Preview Action Bar ===== */
+    .preview-action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .preview-action-bar .bar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ===== Dashboard: Chart Bars ===== */
+    .chart-bar-bg {
+      flex: 1;
+      background: #f3f4f6;
+      border-radius: 4px;
+      height: 24px;
+      overflow: hidden;
+    }
+
+    .chart-bar {
+      background: linear-gradient(90deg, #4f46e5, #7c3aed);
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s;
+      min-width: 0;
+    }
+
+    .chart-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .chart-label {
+      font-size: 13px;
+      color: #374151;
+      min-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chart-pct {
+      font-size: 12px;
+      font-weight: 700;
+      color: #4f46e5;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* ===== Dashboard: Filter Chips ===== */
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid #e5e7eb;
+      background: #ffffff;
+      color: #6b7280;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .chip:hover {
+      border-color: #4f46e5;
+      color: #4f46e5;
+    }
+
+    .chip.active {
+      background: #4f46e5;
+      border-color: #4f46e5;
+      color: #ffffff;
+    }
+
+    /* ===== Dashboard: Search Input ===== */
+    .search-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 9px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1e1e2e;
+      background: #fafafa;
+      transition: border-color 0.15s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #4f46e5;
+      background: #ffffff;
+    }
+
+    /* ===== Dashboard: Option Analysis Table – summary row ===== */
+    tbody tr.summary-row {
+      background: #f5f3ff !important;
+      font-weight: 700;
+    }
+
+    tbody tr.summary-row td {
+      color: #4f46e5;
+    }
+
+    /* ===== Backup Card ===== */
+    .backup-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 640px) {
+      .main-container {
+        padding: 16px 14px 48px;
+      }
+
+      .card {
+        padding: 20px 18px;
+      }
+
+      .app-title {
+        font-size: 15px;
+      }
+
+      .tab-btn {
+        font-size: 13px;
+        padding: 10px 14px;
+        min-width: 0;
+      }
+
+      .tab-btn .tab-icon {
+        font-size: 15px;
+      }
+
+      #toast-container {
+        bottom: 16px;
+        right: 16px;
+        left: 16px;
+      }
+
+      .toast {
+        min-width: 0;
+        max-width: 100%;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .backup-actions {
+        flex-direction: column;
+      }
+
+      .backup-actions .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .search-input-wrap {
+        flex-direction: column;
+      }
+
+      .chart-label {
+        min-width: 100px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Header ===== -->
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-logo">OD</div>
+      <h1 class="app-title">ODD <span>공구 발주서</span> 자동화</h1>
+    </div>
+  </header>
+
+  <!-- ===== Main ===== -->
+  <main class="main-container">
+
+    <!-- Active Round Banner -->
+    <div id="round-banner">
+      <div class="banner-icon">📦</div>
+      <div class="banner-content">
+        <div class="banner-label">현재 공구 라운드</div>
+        <div class="banner-round-name empty">진행 중인 공구 라운드가 없습니다</div>
+        <div class="banner-meta">라운드를 설정하면 여기에 정보가 표시됩니다</div>
+      </div>
+      <div class="banner-badge empty">라운드 없음</div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav" role="tablist">
+      <button class="tab-btn active" role="tab" aria-selected="true"
+              onclick="switchTab('tab1')">
+        <span class="tab-icon">📋</span>
+        발주서 변환
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false"
+              onclick="switchTab('tab2')">
+        <span class="tab-icon">🚚</span>
+        송장 변환
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false"
+              onclick="switchTab('tab3')">
+        <span class="tab-icon">📊</span>
+        대시보드
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false"
+              onclick="switchTab('tab4')">
+        <span class="tab-icon">📦</span>
+        개인 발주
+      </button>
+    </nav>
+
+    <!-- Tab 1: 발주서 변환 -->
+    <div id="tab1" class="tab-content active">
+      <div class="card">
+        <div class="placeholder-box">
+          <div class="placeholder-icon">📋</div>
+          <p>발주서 변환 기능</p>
+          <span>네이버 스마트스토어 주문서 → 한아원 발주서 변환 (준비 중)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: 송장 변환 -->
+    <div id="tab2" class="tab-content">
+      <div class="card">
+        <div class="placeholder-box">
+          <div class="placeholder-icon">🚚</div>
+          <p>송장 변환 기능</p>
+          <span>한아원 송장 → 네이버 스마트스토어 송장 업로드 형식 변환 (준비 중)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: 대시보드 -->
+    <div id="tab3" class="tab-content">
+      <div class="card">
+        <div class="placeholder-box">
+          <div class="placeholder-icon">📊</div>
+          <p>대시보드</p>
+          <span>공구 라운드별 통계 및 처리 현황 (준비 중)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: 개인 발주 -->
+    <div id="tab4" class="tab-content">
+      <div class="card">
+        <div class="card-title"><span class="card-icon">📦</span> 개인 발주서 작성</div>
+        <div class="card-desc">수취인 정보를 입력하고 3PL 발주서 엑셀을 다운로드합니다</div>
+
+        <div class="personal-order-form" id="personal-order-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="po-name">수취인명 <span class="required">*</span></label>
+              <input type="text" id="po-name" placeholder="홍길동" />
+            </div>
+            <div class="form-group">
+              <label for="po-phone">핸드폰 <span class="required">*</span></label>
+              <input type="tel" id="po-phone" placeholder="010-1234-5678" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="po-address">주소 <span class="required">*</span></label>
+            <input type="text" id="po-address" placeholder="서울시 강남구 테헤란로 123" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="po-product">상품 <span class="required">*</span></label>
+              <select id="po-product">
+                <option value="P00300279">ODD. M-01 오드 영양제</option>
+                <option value="P00300280">오드 M-01 스타터키트 5일분</option>
+                <option value="P00300281">오드 M-01 리필팩 30일분</option>
+                <option value="P00300282">5일분 3개</option>
+                <option value="P00300283">30일분 1개 + 5일분 2개</option>
+                <option value="P00300284">30일분 2개 + 5일분 3개</option>
+                <option value="P00300285">30일분 3개 + 5일분 4개</option>
+              </select>
+            </div>
+            <div class="form-group form-group-sm">
+              <label for="po-qty">수량 <span class="required">*</span></label>
+              <input type="number" id="po-qty" value="1" min="1" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="po-message">배송메세지</label>
+            <input type="text" id="po-message" placeholder="부재시 문 앞에 놓아주세요" />
+          </div>
+          <button class="btn btn-primary" onclick="addPersonalOrder()">추가</button>
+        </div>
+      </div>
+
+      <div class="card" id="personal-order-list-card" style="display:none;">
+        <div class="card-title"><span class="card-icon">📋</span> 발주 목록 <span id="po-count" class="badge">0</span></div>
+        <div class="table-wrapper">
+          <table id="personal-order-table">
+            <thead>
+              <tr>
+                <th>번호</th>
+                <th>수취인명</th>
+                <th>핸드폰</th>
+                <th>주소</th>
+                <th>상품명</th>
+                <th>수량</th>
+                <th>배송메세지</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="personal-order-tbody"></tbody>
+          </table>
+        </div>
+        <div class="btn-row" style="margin-top: 16px;">
+          <button class="btn btn-primary" onclick="downloadPersonalOrderExcel()">엑셀 다운로드</button>
+          <button class="btn btn-outline" onclick="clearPersonalOrders()">전체 삭제</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== Toast Container ===== -->
+  <div id="toast-container" aria-live="polite"></div>
+
+  <!-- ===== Modal Overlay ===== -->
+  <div id="modal-overlay" role="dialog" aria-modal="true">
+    <!-- Modal content will be injected by JS -->
+  </div>
+
+  <script>
+    // ===== 설정값 =====
+    const CONFIG = {
+      sender: { name: '한아원', phone: '010-7701-2732', address: '서초대로 60길 18, 한아원 9층' },
+      email: { to: 'gogo@gogochango.com', from: 'rossehan@hanah1.com' },
+      shipping: { method: '택배발송 : 택배,등기,소포', courier: 'CJ대한통운' },
+      validOrderStatuses: ['결제완료', '발주확인', '발송대기']
+    };
+
+    // ===== 상품 매핑 테이블 (긴 문자열 우선 순서) =====
+    const PRODUCT_MAP = [
+      { match: '30일분 3개 + 5일분 4개(110개입)', name: '30일분 3개 + 5일분 4개', code: 'P00300285' },
+      { match: '30일분 2개 + 5일분 3개(75개입)',  name: '30일분 2개 + 5일분 3개', code: 'P00300284' },
+      { match: '30일분 1개 + 5일분 2개(40개입)',  name: '30일분 1개 + 5일분 2개', code: 'P00300283' },
+      { match: '5일분 3개(15개입)',               name: '5일분 3개',               code: 'P00300282' },
+      { match: '5일분 1개',                       name: '오드 M-01 스타터키트 5일분', code: 'P00300280' },
+      { match: '30일분',                          name: '오드 M-01 리필팩 30일분',   code: 'P00300281' }
+    ];
+
+    // 옵션정보가 없을 때 상품명으로 매핑
+    const DEFAULT_PRODUCT = { name: 'ODD. M-01 오드 영양제', code: 'P00300279' };
+
+    function mapProduct(optionText, productName) {
+      const trimmed = (optionText || '').trim();
+      if (trimmed) {
+        for (const item of PRODUCT_MAP) {
+          if (trimmed.includes(item.match)) return item;
+        }
+        return null;
+      }
+      // 옵션정보 없음 → 단일 상품
+      return DEFAULT_PRODUCT;
+    }
+
+    // ===== localStorage 헬퍼 =====
+    const STORAGE_KEY = 'odd-orders';
+
+    function loadData() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : { activeRoundId: null, rounds: [] };
+    }
+
+    function saveData(data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function getActiveRound() {
+      const data = loadData();
+      return data.rounds.find(r => r.id === data.activeRoundId) || null;
+    }
+
+    function saveSnapshot() {
+      localStorage.setItem(STORAGE_KEY + '-undo', localStorage.getItem(STORAGE_KEY));
+    }
+
+    function undoLastChange() {
+      const snapshot = localStorage.getItem(STORAGE_KEY + '-undo');
+      if (snapshot) {
+        localStorage.setItem(STORAGE_KEY, snapshot);
+        showToast('되돌리기 완료');
+        refreshUI();
+      } else {
+        showToast('되돌릴 변경사항이 없습니다', 'warning');
+      }
+    }
+
+    // ===== 공구 생성 모달 열기 =====
+    function openCreateRoundModal() {
+      openModal(`
+        <div class="modal-title">새 공구 라운드 만들기</div>
+        <div class="modal-desc">공구 회차 정보를 입력하면 주문 데이터를 라운드별로 관리할 수 있습니다.</div>
+        <div class="form-group">
+          <label class="form-label" for="cr-name">회차명 <span class="required">*</span></label>
+          <input class="form-input" id="cr-name" type="text" placeholder="예) 1차 공구, 2024년 봄 공구" maxlength="50" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="cr-start">시작일 <span class="required">*</span></label>
+            <input class="form-input" id="cr-start" type="date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cr-end">종료일 <span class="required">*</span></label>
+            <input class="form-input" id="cr-end" type="date" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cr-influencer">인플루언서명</label>
+          <input class="form-input" id="cr-influencer" type="text" placeholder="예) @username (선택 사항)" maxlength="50" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+          <button class="btn btn-primary" onclick="submitCreateRound()">✅ 공구 생성</button>
+        </div>
+      `);
+      // 포커스 이동
+      setTimeout(() => {
+        const nameInput = document.getElementById('cr-name');
+        if (nameInput) nameInput.focus();
+      }, 50);
+    }
+
+    // ===== 공구 생성 폼 제출 =====
+    function submitCreateRound() {
+      const name       = (document.getElementById('cr-name')?.value || '').trim();
+      const startDate  = (document.getElementById('cr-start')?.value || '').trim();
+      const endDate    = (document.getElementById('cr-end')?.value || '').trim();
+      const influencer = (document.getElementById('cr-influencer')?.value || '').trim();
+
+      if (!name) {
+        showToast('회차명을 입력해주세요.', 'warning');
+        document.getElementById('cr-name')?.focus();
+        return;
+      }
+      if (!startDate) {
+        showToast('시작일을 선택해주세요.', 'warning');
+        document.getElementById('cr-start')?.focus();
+        return;
+      }
+      if (!endDate) {
+        showToast('종료일을 선택해주세요.', 'warning');
+        document.getElementById('cr-end')?.focus();
+        return;
+      }
+      if (endDate < startDate) {
+        showToast('종료일은 시작일 이후여야 합니다.', 'warning');
+        document.getElementById('cr-end')?.focus();
+        return;
+      }
+
+      closeModal();
+      createRound(name, startDate, endDate, influencer);
+    }
+
+    // ===== 공구 라운드 생성 =====
+    function createRound(name, startDate, endDate, influencer) {
+      const data = loadData();
+      const id = 'round-' + Date.now();
+      data.rounds.push({ id, name, startDate, endDate, influencer, orders: [] });
+      data.activeRoundId = id;
+      saveData(data);
+      refreshUI();
+      showToast(`${name} 생성 완료`, 'success');
+    }
+
+    // ===== 공구 라운드 수정 모달 =====
+    function openEditRoundModal() {
+      const round = getActiveRound();
+      if (!round) return;
+      openModal(`
+        <div class="modal-title">공구 라운드 수정</div>
+        <div class="form-group">
+          <label class="form-label" for="er-name">회차명 <span class="required">*</span></label>
+          <input class="form-input" id="er-name" type="text" value="${escapeHtml(round.name)}" maxlength="50" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="er-start">시작일 <span class="required">*</span></label>
+            <input class="form-input" id="er-start" type="date" value="${round.startDate || ''}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="er-end">종료일 <span class="required">*</span></label>
+            <input class="form-input" id="er-end" type="date" value="${round.endDate || ''}" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="er-influencer">인플루언서명</label>
+          <input class="form-input" id="er-influencer" type="text" value="${escapeHtml(round.influencer || '')}" maxlength="50" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+          <button class="btn btn-primary" onclick="submitEditRound()">저장</button>
+        </div>
+      `);
+    }
+
+    function submitEditRound() {
+      const name = (document.getElementById('er-name')?.value || '').trim();
+      const startDate = (document.getElementById('er-start')?.value || '').trim();
+      const endDate = (document.getElementById('er-end')?.value || '').trim();
+      const influencer = (document.getElementById('er-influencer')?.value || '').trim();
+      if (!name) { showToast('회차명을 입력해주세요.', 'warning'); return; }
+      if (!startDate) { showToast('시작일을 선택해주세요.', 'warning'); return; }
+      if (!endDate) { showToast('종료일을 선택해주세요.', 'warning'); return; }
+      if (endDate < startDate) { showToast('종료일은 시작일 이후여야 합니다.', 'warning'); return; }
+
+      const data = loadData();
+      const round = data.rounds.find(r => r.id === data.activeRoundId);
+      if (!round) return;
+      round.name = name;
+      round.startDate = startDate;
+      round.endDate = endDate;
+      round.influencer = influencer;
+      saveData(data);
+      closeModal();
+      refreshUI();
+      showToast('공구 라운드 수정 완료', 'success');
+    }
+
+    // ===== 활성 공구 전환 =====
+    function switchRound(roundId) {
+      const data = loadData();
+      data.activeRoundId = roundId;
+      saveData(data);
+      convertedOrders = null;
+      convertedTracking = null;
+      refreshUI();
+    }
+
+    // ===== 배너 렌더링 =====
+    function renderRoundBanner() {
+      const banner = document.getElementById('round-banner');
+      if (!banner) return;
+
+      const round = getActiveRound();
+      const data  = loadData();
+
+      if (!round) {
+        // 빈 상태
+        banner.classList.remove('has-round');
+        banner.innerHTML = `
+          <div class="banner-icon">📦</div>
+          <div class="banner-content">
+            <div class="banner-label">현재 공구 라운드</div>
+            <div class="banner-round-name empty">진행 중인 공구 라운드가 없습니다</div>
+            <div class="banner-meta">라운드를 설정하면 여기에 정보가 표시됩니다</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openCreateRoundModal()">＋ 새 공구 만들기</button>
+        `;
+      } else {
+        // 활성 라운드 상태
+        banner.classList.add('has-round');
+
+        // 날짜 포맷 (YYYY-MM-DD → YYYY.MM.DD)
+        const fmt = (d) => d ? d.replace(/-/g, '.') : '';
+        const meta = round.influencer
+          ? `${fmt(round.startDate)} ~ ${fmt(round.endDate)} · ${round.influencer}`
+          : `${fmt(round.startDate)} ~ ${fmt(round.endDate)}`;
+
+        // 라운드 전환 드롭다운 옵션 생성
+        let options = '';
+        data.rounds.forEach(r => {
+          const selected = r.id === round.id ? ' selected' : '';
+          options += `<option value="${r.id}"${selected}>${r.name}</option>`;
+        });
+
+        banner.innerHTML = `
+          <div class="banner-icon">📦</div>
+          <div class="banner-content">
+            <div class="banner-label">현재 공구 라운드</div>
+            <div class="banner-round-name">${escapeHtml(round.name)}</div>
+            <div class="banner-meta">${escapeHtml(meta)}</div>
+          </div>
+          <div class="round-select-wrap">
+            <select class="round-select" onchange="switchRound(this.value)" title="공구 라운드 전환">${options}</select>
+            <button class="btn btn-secondary btn-sm" onclick="openEditRoundModal()">수정</button>
+            <button class="btn btn-primary btn-sm" onclick="openCreateRoundModal()">＋ 새 공구</button>
+          </div>
+        `;
+      }
+    }
+
+    // XSS 방지용 이스케이프
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // ===== 탭 1/2 빈 상태 렌더링 =====
+    function renderNoRoundState(tabEl, tabName) {
+      tabEl.innerHTML = `
+        <div class="card">
+          <div class="no-round-state">
+            <div class="no-round-icon">📦</div>
+            <p>먼저 공구를 만들어주세요</p>
+            <span>${tabName}을 사용하려면 공구 라운드가 필요합니다.</span>
+            <button class="btn btn-primary" onclick="openCreateRoundModal()" style="margin-top:8px;">＋ 새 공구 만들기</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ===== 모듈 수준 변수: 변환된 주문 데이터 (Task 5에서도 사용) =====
+    let convertedOrders = null;
+
+    // ===== 모듈 수준 변수: 변환된 송장 데이터 (Task 6) =====
+    let convertedTracking = null;
+
+    // ===== 모듈 수준 변수: 대시보드 필터 (Task 7) =====
+    let dashboardFilter = '전체';
+
+    // ===== 엑셀 파싱 (xlsx-populate 직접 사용) =====
+    async function parseSmartStoreExcel(file, password) {
+      const arrayBuf = await file.arrayBuffer();
+      const opts = password ? { password: password } : {};
+      const workbook = await XlsxPopulate.fromDataAsync(arrayBuf, opts);
+      const sheet = workbook.sheet(0);
+      const usedRange = sheet.usedRange();
+      if (!usedRange) throw new Error('빈 시트입니다.');
+
+      // 모든 셀 값을 2D 배열로 읽기
+      const allValues = usedRange.value();
+
+      // 헤더 행 찾기
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(allValues.length, 10); i++) {
+        const row = (allValues[i] || []).map(c => String(c || '').trim());
+        if (row.includes('주문상태') || row.includes('상품주문번호') || row.includes('수취인명')) {
+          headerIdx = i;
+          break;
+        }
+      }
+      if (headerIdx === -1) {
+        throw new Error('주문서 헤더를 찾을 수 없습니다. 스마트스토어 주문서 파일인지 확인해주세요.');
+      }
+
+      const headers = allValues[headerIdx].map(h => String(h || '').trim());
+      const result = [];
+      for (let i = headerIdx + 1; i < allValues.length; i++) {
+        const row = allValues[i];
+        if (!row || row.every(c => !c && c !== 0)) continue;
+        const obj = {};
+        headers.forEach((h, idx) => {
+          let val = row[idx];
+          // 숫자가 크면 문자열로 변환 (상품주문번호, 전화번호 등 정밀도 보존)
+          if (typeof val === 'number' && !Number.isInteger(val)) {
+            val = String(val);
+          } else if (typeof val === 'number' && val > 9999999999) {
+            val = String(val);
+          }
+          obj[h] = val !== undefined && val !== null ? val : '';
+        });
+        result.push(obj);
+      }
+      return result;
+    }
+
+    // ===== 주문 변환 =====
+    function convertOrders(rows) {
+      const results = [];
+      let excludedCount = 0;
+      rows.forEach((row) => {
+        const status = (row['주문상태'] || '').trim();
+        if (!CONFIG.validOrderStatuses.includes(status)) {
+          excludedCount++;
+          return;
+        }
+        const product = mapProduct(row['옵션정보'], row['상품명']);
+        results.push({
+          seq: results.length + 1,
+          recipientName: row['수취인명'] || '',
+          productName: product ? product.name : '',
+          productCode: product ? product.code : '',
+          mappingFailed: !product,
+          quantity: row['수량'] || 1,
+          phone: row['수취인연락처1'] || '',
+          phone2: row['수취인연락처2'] || '',
+          address: ((row['기본배송지'] || '') + ' ' + (row['상세배송지'] || '')).trim(),
+          message: row['배송메세지'] || '',
+          productOrderNo: row['상품주문번호'] || '',
+          amount: Number(row['최종 상품별 총 주문금액']) || 0,
+          option: row['옵션정보'] || '',
+          orderedAt: row['주문일시'] || ''
+        });
+      });
+      return { results, excludedCount };
+    }
+
+    // ===== 중복 주문 감지 =====
+    function checkDuplicates(orders) {
+      const round = getActiveRound();
+      if (!round) return [];
+      const existing = new Set(round.orders.map(o => o.productOrderNo));
+      return orders.filter(o => existing.has(o.productOrderNo));
+    }
+
+    // ===== 워크플로우 진행 표시기 렌더링 =====
+    // step: 1=업로드, 2=변환확인, 3=다운로드, 4=Gmail발송
+    function renderWorkflowSteps(currentStep) {
+      const steps = [
+        { label: '엑셀 업로드' },
+        { label: '변환 확인' },
+        { label: '다운로드' },
+        { label: 'Gmail 발송' }
+      ];
+      let html = '<div class="workflow-steps">';
+      steps.forEach((s, i) => {
+        const num = i + 1;
+        let cls = '';
+        if (num < currentStep) cls = 'done';
+        else if (num === currentStep) cls = 'active';
+        html += `
+          <div class="wf-step ${cls}">
+            <div class="wf-step-circle">${num < currentStep ? '✓' : num}</div>
+            <div class="wf-step-label">${s.label}</div>
+          </div>
+        `;
+        if (i < steps.length - 1) {
+          html += `<div class="wf-arrow${num < currentStep ? ' done' : ''}"></div>`;
+        }
+      });
+      html += '</div>';
+      return html;
+    }
+
+    // ===== 탭1: 업로드 UI 렌더링 =====
+    function renderTab1Upload() {
+      const tab1 = document.getElementById('tab1');
+      if (!tab1) return;
+      tab1.innerHTML = `
+        ${renderWorkflowSteps(1)}
+        <div class="card">
+          <div class="card-title"><span class="card-icon">📋</span> 스마트스토어 주문서 업로드</div>
+          <div class="card-desc">네이버 API에서 주문을 자동으로 가져오거나, 엑셀 파일을 직접 업로드하세요.</div>
+          <div class="fetch-orders-section">
+            <button class="btn btn-primary btn-lg" id="btn-fetch-orders" onclick="handleFetchOrders()">
+              주문 가져오기 (네이버 API)
+            </button>
+            <button class="btn btn-secondary" onclick="handleDemoOrders()">테스트 데이터</button>
+            <span class="fetch-hint">최근 24시간 결제완료 주문을 자동으로 가져옵니다</span>
+          </div>
+          <div class="divider-or"><span>또는 엑셀 직접 업로드</span></div>
+          <div class="upload-area" id="tab1-upload-area"
+               onclick="document.getElementById('tab1-file-input').click()"
+               ondragover="handleTab1DragOver(event)"
+               ondragleave="handleTab1DragLeave(event)"
+               ondrop="handleTab1Drop(event)">
+            <span class="upload-icon">📂</span>
+            <p><strong>클릭하여 파일 선택</strong> 또는 여기에 드래그 앤 드롭</p>
+            <p class="upload-hint">.xlsx, .xls 형식 지원 · 스마트스토어 주문 엑셀 전용</p>
+          </div>
+          <input type="file" id="tab1-file-input" accept=".xlsx,.xls" style="display:none"
+                 onchange="handleTab1FileInput(event)" />
+        </div>
+      `;
+    }
+
+    // ===== 탭1: 미리보기 테이블 렌더링 =====
+    function renderTab1Preview(results, excludedCount) {
+      const tab1 = document.getElementById('tab1');
+      if (!tab1) return;
+
+      const failCount = results.filter(o => o.mappingFailed).length;
+
+      let rows = '';
+      results.forEach(o => {
+        const failClass = o.mappingFailed ? ' mapping-failed' : '';
+        const productCell = o.mappingFailed
+          ? `<span class="mapping-warn-badge">⚠ 매핑 실패</span> <small style="color:#9ca3af;">${escapeHtml(o.option)}</small>`
+          : escapeHtml(o.productName);
+        rows += `
+          <tr class="${failClass}">
+            <td>${o.seq}</td>
+            <td>${escapeHtml(o.recipientName)}</td>
+            <td>${productCell}</td>
+            <td style="text-align:center;">${escapeHtml(String(o.quantity))}</td>
+            <td>${escapeHtml(o.phone)}</td>
+            <td style="max-width:220px;white-space:normal;">${escapeHtml(o.address)}</td>
+            <td style="max-width:160px;white-space:normal;">${escapeHtml(o.message)}</td>
+            <td>${escapeHtml(o.productOrderNo)}</td>
+          </tr>
+        `;
+      });
+
+      tab1.innerHTML = `
+        ${renderWorkflowSteps(2)}
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">변환 완료</div>
+            <div class="stat-value">${results.length}<span class="stat-unit">건</span></div>
+            <div class="stat-change">결제완료 + 발주확인 주문</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">제외됨</div>
+            <div class="stat-value" style="color:#d97706;">${excludedCount}<span class="stat-unit">건</span></div>
+            <div class="stat-change">기타 상태 주문 제외</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">매핑 실패</div>
+            <div class="stat-value" style="color:${failCount > 0 ? '#dc2626' : '#059669'};">${failCount}<span class="stat-unit">건</span></div>
+            <div class="stat-change">${failCount > 0 ? '상품명을 직접 확인하세요' : '모두 정상 매핑됨'}</div>
+          </div>
+        </div>
+        <div class="card" style="padding:24px 24px 20px;">
+          <div class="preview-action-bar">
+            <div class="bar-left">
+              <span class="card-title" style="margin:0;font-size:15px;">변환 미리보기</span>
+              ${failCount > 0 ? '<span class="badge badge-orange">⚠ 매핑 실패 ' + failCount + '건</span>' : '<span class="badge badge-green">✓ 정상</span>'}
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="resetTab1Upload()">↺ 다시 업로드</button>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>번호</th>
+                  <th>수취인명</th>
+                  <th>상품명</th>
+                  <th>수량</th>
+                  <th>핸드폰</th>
+                  <th>주소</th>
+                  <th>배송메세지</th>
+                  <th>상품주문번호</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows || '<tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af;">변환된 주문이 없습니다.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+          <hr class="divider" style="margin:20px 0 16px;" />
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-primary" onclick="handleDownloadClick()">
+                ⬇️ 발주서 다운로드
+              </button>
+              <button class="btn btn-success" onclick="handleGmailClick()">
+                ✉️ Gmail 발송
+              </button>
+              <button class="btn btn-secondary" onclick="handleSaveClick()">
+                💾 확정 저장
+              </button>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-secondary btn-sm" onclick="undoLastChange()">
+                ↩ 되돌리기
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="resetTab1Upload()">
+                ↺ 다시 업로드
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ===== 탭1: 테스트 더미 데이터 =====
+    function handleDemoOrders() {
+      const demoData = [
+        { recipientName: '김철수', phone: '010-1234-5678', phone2: '', baseAddress: '서울시 강남구 테헤란로 123', detailedAddress: '4층 401호', deliveryMemo: '부재시 문 앞에 놓아주세요', productOption: '', productName: 'ODD. M-01 오드 영양제', quantity: 1, productOrderId: '2026040800001', totalPaymentAmount: 39000, orderDate: '2026-04-08' },
+        { recipientName: '이영희', phone: '010-9876-5432', phone2: '02-555-1234', baseAddress: '경기도 성남시 분당구 판교로 256', detailedAddress: '판교테크노밸리 B동', deliveryMemo: '경비실에 맡겨주세요', productOption: '30일분', productName: '', quantity: 2, productOrderId: '2026040800002', totalPaymentAmount: 110000, orderDate: '2026-04-08' },
+        { recipientName: '박지민', phone: '010-5555-7777', phone2: '', baseAddress: '부산시 해운대구 해운대해변로 30', detailedAddress: '해운대아파트 102동 803호', deliveryMemo: '', productOption: '5일분 1개', productName: '', quantity: 1, productOrderId: '2026040800003', totalPaymentAmount: 15000, orderDate: '2026-04-08' },
+        { recipientName: '최수진', phone: '010-3333-4444', phone2: '', baseAddress: '대전시 유성구 대학로 99', detailedAddress: '', deliveryMemo: '배송 전 연락 부탁드립니다', productOption: '5일분 3개(15개입)', productName: '', quantity: 1, productOrderId: '2026040800004', totalPaymentAmount: 42000, orderDate: '2026-04-08' },
+        { recipientName: '정민호', phone: '010-8888-9999', phone2: '', baseAddress: '인천시 연수구 송도대로 123', detailedAddress: '트리플스트리트 C동 15층', deliveryMemo: '', productOption: '30일분 2개 + 5일분 3개(75개입)', productName: '', quantity: 1, productOrderId: '2026040800005', totalPaymentAmount: 195000, orderDate: '2026-04-08' },
+      ];
+
+      const results = demoData.map((o, idx) => {
+        const product = mapProduct(o.productOption, o.productName);
+        return {
+          seq: idx + 1,
+          recipientName: o.recipientName,
+          productName: product ? product.name : '',
+          productCode: product ? product.code : '',
+          mappingFailed: !product,
+          quantity: o.quantity,
+          phone: o.phone,
+          phone2: o.phone2,
+          address: ((o.baseAddress || '') + ' ' + (o.detailedAddress || '')).trim(),
+          message: o.deliveryMemo || '',
+          productOrderNo: o.productOrderId,
+          amount: o.totalPaymentAmount || 0,
+          option: o.productOption || '',
+          orderedAt: o.orderDate || ''
+        };
+      });
+
+      convertedOrders = results;
+      showToast(`테스트 데이터 ${results.length}건 로드 완료`, 'success');
+      renderTab1Preview(results, 0);
+    }
+
+    // ===== 탭1: 네이버 API로 주문 가져오기 =====
+    async function handleFetchOrders() {
+      const btn = document.getElementById('btn-fetch-orders');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '가져오는 중...';
+      }
+
+      try {
+        showToast('네이버 API에서 주문을 가져오는 중...', 'info', 3000);
+        const res = await fetch('/api/orders');
+        const data = await res.json();
+
+        if (!data.success) {
+          throw new Error(data.error || '주문 가져오기 실패');
+        }
+
+        if (data.orders.length === 0) {
+          showToast('최근 24시간 내 결제완료 주문이 없습니다.', 'warning');
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = '주문 가져오기 (네이버 API)';
+          }
+          return;
+        }
+
+        // API 응답을 convertOrders와 동일한 형태로 변환
+        const results = data.orders.map((o, idx) => {
+          const product = mapProduct(o.productOption, o.productName);
+          return {
+            seq: idx + 1,
+            recipientName: o.recipientName,
+            productName: product ? product.name : '',
+            productCode: product ? product.code : '',
+            mappingFailed: !product,
+            quantity: o.quantity,
+            phone: o.phone,
+            phone2: o.phone2,
+            address: ((o.baseAddress || '') + ' ' + (o.detailedAddress || '')).trim(),
+            message: o.deliveryMemo || '',
+            productOrderNo: o.productOrderId,
+            amount: o.totalPaymentAmount || 0,
+            option: o.productOption || '',
+            orderedAt: o.orderDate || ''
+          };
+        });
+
+        convertedOrders = results;
+        const dupes = checkDuplicates(results);
+        if (dupes.length > 0) {
+          showToast(`중복 주문 ${dupes.length}건이 감지되었습니다.`, 'warning', 5000);
+        }
+        showToast(`API에서 ${results.length}건 가져옴`, 'success');
+        renderTab1Preview(results, 0);
+      } catch (err) {
+        console.error(err);
+        showToast('API 오류: ' + (err.message || '알 수 없는 오류'), 'error');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '주문 가져오기 (네이버 API)';
+        }
+      }
+    }
+
+    // ===== 탭1: 파일 업로드 처리 =====
+    async function handleTab1Upload(file) {
+      if (!file) return;
+      if (!file.name.match(/\.(xlsx|xls)$/i)) {
+        showToast('xlsx 또는 xls 파일만 업로드할 수 있습니다.', 'warning');
+        return;
+      }
+      try {
+        showToast('파일 읽는 중...', 'info', 1500);
+        let rows;
+        try {
+          // 먼저 비밀번호 없이 시도
+          rows = await parseSmartStoreExcel(file);
+        } catch (e) {
+          if (e.message && (e.message.includes('password') || e.message.includes('central directory') || e.message.includes('zip'))) {
+            // 비밀번호 보호 파일 → 자동으로 1111 시도
+            showToast('비밀번호 보호 파일 감지, 자동 해제 중...', 'info', 1500);
+            rows = await parseSmartStoreExcel(file, '1111');
+          } else {
+            throw e;
+          }
+        }
+        const { results, excludedCount } = convertOrders(rows);
+        const dupes = checkDuplicates(results);
+
+        convertedOrders = results;
+
+        if (dupes.length > 0) {
+          showToast(`중복 주문 ${dupes.length}건이 감지되었습니다. 확인 후 진행하세요.`, 'warning', 5000);
+        }
+        showToast(`변환 완료: ${results.length}건 (제외 ${excludedCount}건)`, 'success');
+        renderTab1Preview(results, excludedCount);
+      } catch (err) {
+        console.error(err);
+        showToast('파일 파싱 오류: ' + (err.message || '알 수 없는 오류'), 'error');
+      }
+    }
+
+    function handleTab1FileInput(event) {
+      const file = event.target.files[0];
+      if (file) handleTab1Upload(file);
+    }
+
+    function handleTab1DragOver(event) {
+      event.preventDefault();
+      document.getElementById('tab1-upload-area')?.classList.add('dragover');
+    }
+
+    function handleTab1DragLeave(event) {
+      document.getElementById('tab1-upload-area')?.classList.remove('dragover');
+    }
+
+    function handleTab1Drop(event) {
+      event.preventDefault();
+      document.getElementById('tab1-upload-area')?.classList.remove('dragover');
+      const file = event.dataTransfer.files[0];
+      if (file) handleTab1Upload(file);
+    }
+
+    // ===== 탭1: 다시 업로드 (미리보기 → 업로드 화면으로 리셋) =====
+    function resetTab1Upload() {
+      convertedOrders = null;
+      renderTab1Upload();
+    }
+
+    // ===== Task 5: 3PL 발주서 엑셀 생성 + 다운로드 (xlsx-populate) =====
+    async function downloadOrderExcel(orders) {
+      const today = new Date().toISOString().slice(0, 10);
+      const headers = ['보내는분', '보내는분 연락처', '주소', '번호', '수취인명', '상품명', '수량', '핸드폰', '기타연락처', '주소', '배송메세지', '상품주문번호', '상품고유코드', '배송방식', '운송장번호', '택배사'];
+      const colWidths = [10, 16, 30, 6, 10, 28, 6, 16, 16, 40, 22, 20, 14, 12, 16, 12];
+
+      const wb = await XlsxPopulate.fromBlankAsync();
+      const ws = wb.sheet(0).name('발주서');
+
+      // 헤더 입력
+      headers.forEach((h, i) => ws.cell(1, i + 1).value(h));
+
+      // D1:P1 노란색 배경 (컬럼 4~16)
+      ws.range('D1:P1').style('fill', 'FFFF00');
+
+      // 헤더 전체 볼드
+      ws.range('A1:P1').style('bold', true);
+
+      // 데이터 입력
+      orders.forEach((o, idx) => {
+        const r = idx + 2;
+        ws.cell(r, 1).value(CONFIG.sender.name);
+        ws.cell(r, 2).value(CONFIG.sender.phone);
+        ws.cell(r, 3).value(CONFIG.sender.address);
+        ws.cell(r, 4).value(o.seq);
+        ws.cell(r, 5).value(o.recipientName);
+        ws.cell(r, 6).value(o.productName);
+        ws.cell(r, 7).value(o.quantity);
+        ws.cell(r, 8).value(String(o.phone || '')).style('numberFormat', '@');
+        ws.cell(r, 9).value(String(o.phone2 || '')).style('numberFormat', '@');
+        ws.cell(r, 10).value(o.address);
+        ws.cell(r, 11).value(o.message);
+        ws.cell(r, 12).value(String(o.productOrderNo)).style('numberFormat', '@');
+        ws.cell(r, 13).value(o.productCode);
+        ws.cell(r, 14).value('');
+        ws.cell(r, 15).value('');
+        ws.cell(r, 16).value('');
+      });
+
+      // 컬럼 너비 설정
+      colWidths.forEach((w, i) => ws.column(i + 1).width(w));
+
+      // 필터 설정
+      ws.range('A1:P' + (orders.length + 1)).autoFilter();
+
+      // 참조 시트
+      const refSheet = wb.addSheet('참조');
+      const refData = [
+        ['상품명', '상품코드'],
+        ['ODD. M-01 오드 영양제', 'P00300279'],
+        ['오드 M-01 스타터키트 5일분', 'P00300280'],
+        ['오드 M-01 리필팩 30일분', 'P00300281'],
+        ['5일분 3개', 'P00300282'],
+        ['30일분 1개 + 5일분 2개', 'P00300283'],
+        ['30일분 2개 + 5일분 3개', 'P00300284'],
+        ['30일분 3개 + 5일분 4개', 'P00300285']
+      ];
+      refData.forEach((row, r) => {
+        row.forEach((val, c) => refSheet.cell(r + 1, c + 1).value(val));
+      });
+      refSheet.column(1).width(30);
+      refSheet.column(2).width(14);
+
+      // 다운로드
+      const blob = await wb.outputAsync();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${today} 한아원 발주서.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`${today} 한아원 발주서.xlsx 다운로드 완료`, 'success');
+    }
+
+    // ===== Task 5: localStorage에 주문 데이터 저장 =====
+    function saveOrdersToStorage(orders) {
+      saveSnapshot(); // undo용 스냅샷
+      const data = loadData();
+      const round = data.rounds.find(r => r.id === data.activeRoundId);
+      if (!round) {
+        showToast('활성 공구 라운드가 없습니다.', 'warning');
+        return;
+      }
+      orders.forEach(o => {
+        const existing = round.orders.findIndex(e => e.productOrderNo === o.productOrderNo);
+        const orderData = {
+          productOrderNo: o.productOrderNo,
+          recipientName: o.recipientName,
+          phone: o.phone,
+          option: o.option,
+          threePLProductName: o.productName,
+          quantity: o.quantity,
+          amount: o.amount,
+          address: o.address,
+          status: 'pending',
+          trackingNo: '',
+          orderedAt: o.orderedAt,
+          shippedAt: ''
+        };
+        if (existing >= 0) {
+          round.orders[existing] = { ...round.orders[existing], ...orderData };
+        } else {
+          round.orders.push(orderData);
+        }
+      });
+      saveData(data);
+    }
+
+    // ===== Task 5: 워크플로우 스텝 업데이트 헬퍼 =====
+    function updateWorkflowStep(step) {
+      const wfEl = document.querySelector('#tab1 .workflow-steps');
+      if (wfEl) {
+        wfEl.outerHTML = renderWorkflowSteps(step);
+      }
+    }
+
+    // ===== Task 5: 다운로드 버튼 핸들러 =====
+    async function handleDownloadClick() {
+      if (!convertedOrders || convertedOrders.length === 0) {
+        showToast('변환된 주문이 없습니다.', 'warning');
+        return;
+      }
+      await downloadOrderExcel(convertedOrders);
+      // 워크플로우 step 3 활성화
+      const tab1 = document.getElementById('tab1');
+      if (tab1) {
+        const wfEl = tab1.querySelector('.workflow-steps');
+        if (wfEl) wfEl.outerHTML = renderWorkflowSteps(3);
+      }
+    }
+
+    // ===== Task 5: Gmail 버튼 핸들러 =====
+    function handleGmailClick() {
+      openGmail();
+      // 워크플로우 step 4 활성화
+      const tab1 = document.getElementById('tab1');
+      if (tab1) {
+        const wfEl = tab1.querySelector('.workflow-steps');
+        if (wfEl) wfEl.outerHTML = renderWorkflowSteps(4);
+      }
+    }
+
+    // ===== Task 5: 저장 버튼 핸들러 =====
+    function handleSaveClick() {
+      if (!convertedOrders || convertedOrders.length === 0) {
+        showToast('저장할 주문이 없습니다.', 'warning');
+        return;
+      }
+      saveOrdersToStorage(convertedOrders);
+      showToast(`${convertedOrders.length}건 저장 완료`, 'success');
+    }
+
+    // ===== Task 6: 탭2 워크플로우 (3단계) 렌더링 =====
+    // step: 1=업로드, 2=변환확인, 3=다운로드
+    function renderWorkflowStepsTab2(currentStep) {
+      const steps = [
+        { label: '엑셀 업로드' },
+        { label: '변환 확인' },
+        { label: '다운로드' }
+      ];
+      let html = '<div class="workflow-steps">';
+      steps.forEach((s, i) => {
+        const num = i + 1;
+        let cls = '';
+        if (num < currentStep) cls = 'done';
+        else if (num === currentStep) cls = 'active';
+        html += `
+          <div class="wf-step ${cls}">
+            <div class="wf-step-circle">${num < currentStep ? '✓' : num}</div>
+            <div class="wf-step-label">${s.label}</div>
+          </div>
+        `;
+        if (i < steps.length - 1) {
+          html += `<div class="wf-arrow${num < currentStep ? ' done' : ''}"></div>`;
+        }
+      });
+      html += '</div>';
+      return html;
+    }
+
+    // ===== Task 6: 3PL 회신 엑셀 파싱 =====
+    function parseTrackingExcel(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const wb = XLSX.read(e.target.result, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+          let skippedNoOrderNo = 0;
+          let skippedNoTracking = 0;
+          const results = [];
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+            const productOrderNo = String(row[11] || '').trim(); // L열 (인덱스 11)
+            const trackingNo = String(row[14] || '').trim();      // O열 (인덱스 14)
+            if (!productOrderNo) { skippedNoOrderNo++; continue; }
+            if (!trackingNo) { skippedNoTracking++; continue; }
+            results.push({ productOrderNo, trackingNo });
+          }
+          resolve({ results, skippedNoOrderNo, skippedNoTracking });
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    // ===== Task 6: 스마트스토어 송장 엑셀 다운로드 =====
+    async function downloadTrackingExcel(trackingData) {
+      const wb = await XlsxPopulate.fromBlankAsync();
+      const ws = wb.sheet(0).name('발송처리');
+      const headers = ['상품주문번호', '배송방법', '택배사', '송장번호'];
+      const colWidths = [22, 24, 14, 18];
+
+      // 헤더
+      headers.forEach((h, i) => ws.cell(1, i + 1).value(h));
+      ws.range('A1:D1').style({ bold: true, fill: 'CCCCFF' });
+
+      // 데이터
+      trackingData.forEach((t, idx) => {
+        const r = idx + 2;
+        ws.cell(r, 1).value(String(t.productOrderNo)).style('numberFormat', '@');
+        ws.cell(r, 2).value('택배발송 : 택배,등기,소포');
+        ws.cell(r, 3).value(CONFIG.shipping.courier);
+        ws.cell(r, 4).value(String(t.trackingNo || '')).style('numberFormat', '@');
+      });
+
+      // 컬럼 너비
+      colWidths.forEach((w, i) => ws.column(i + 1).width(w));
+
+      // 다운로드 (.xlsx)
+      const blob = await wb.outputAsync();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '스마트스토어_송장업로드.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('스마트스토어_송장업로드.xlsx 다운로드 완료', 'success');
+    }
+
+    // ===== Task 6: localStorage 발송 상태 업데이트 =====
+    function updateShippingStatus(trackingData) {
+      saveSnapshot();
+      const data = loadData();
+      const round = data.rounds.find(r => r.id === data.activeRoundId);
+      if (!round) return;
+      let updated = 0;
+      const today = new Date().toISOString().slice(0, 10);
+      trackingData.forEach(t => {
+        const order = round.orders.find(o => o.productOrderNo === t.productOrderNo);
+        if (order) {
+          order.status = 'shipped';
+          order.trackingNo = t.trackingNo;
+          order.shippedAt = today;
+          updated++;
+        }
+      });
+      saveData(data);
+      const total = round.orders.length;
+      const shipped = round.orders.filter(o => o.status === 'shipped').length;
+      const pct = total > 0 ? Math.round((shipped / total) * 100) : 0;
+      showToast(`${updated}건 송장 반영 완료! 발송완료율 ${pct}%`, 'success');
+    }
+
+    // ===== Task 6: 탭2 업로드 UI 렌더링 =====
+    function renderTab2Upload() {
+      const tab2 = document.getElementById('tab2');
+      if (!tab2) return;
+      tab2.innerHTML = `
+        ${renderWorkflowStepsTab2(1)}
+        <div class="card">
+          <div class="card-title"><span class="card-icon">🚚</span> 3PL 회신 엑셀 업로드</div>
+          <div class="card-desc">한아원(3PL)에서 회신받은 송장 엑셀 파일(.xlsx/.xls)을 업로드하세요. L열(상품주문번호)과 O열(운송장번호)을 자동으로 읽어 스마트스토어 송장 업로드 형식으로 변환합니다.</div>
+          <div class="upload-area" id="tab2-upload-area"
+               onclick="document.getElementById('tab2-file-input').click()"
+               ondragover="handleTab2DragOver(event)"
+               ondragleave="handleTab2DragLeave(event)"
+               ondrop="handleTab2Drop(event)">
+            <span class="upload-icon">📂</span>
+            <p><strong>클릭하여 파일 선택</strong> 또는 여기에 드래그 앤 드롭</p>
+            <p class="upload-hint">.xlsx, .xls 형식 지원 · 한아원 3PL 송장 엑셀 전용</p>
+          </div>
+          <input type="file" id="tab2-file-input" accept=".xlsx,.xls" style="display:none"
+                 onchange="handleTab2FileInput(event)" />
+        </div>
+      `;
+    }
+
+    // ===== Task 6: 탭2 미리보기 테이블 렌더링 =====
+    function renderTab2Preview(results, skippedNoOrderNo, skippedNoTracking) {
+      const tab2 = document.getElementById('tab2');
+      if (!tab2) return;
+
+      let rows = '';
+      results.forEach(t => {
+        rows += `
+          <tr>
+            <td>${escapeHtml(t.productOrderNo)}</td>
+            <td>${escapeHtml(CONFIG.shipping.method)}</td>
+            <td>${escapeHtml(CONFIG.shipping.courier)}</td>
+            <td>${escapeHtml(t.trackingNo)}</td>
+          </tr>
+        `;
+      });
+
+      const skippedTotal = skippedNoOrderNo + skippedNoTracking;
+
+      tab2.innerHTML = `
+        ${renderWorkflowStepsTab2(2)}
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">변환 완료</div>
+            <div class="stat-value">${results.length}<span class="stat-unit">건</span></div>
+            <div class="stat-change">송장번호 정상 매핑</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">주문번호 없음</div>
+            <div class="stat-value" style="color:#d97706;">${skippedNoOrderNo}<span class="stat-unit">건</span></div>
+            <div class="stat-change">L열 비어있어 제외됨</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">송장번호 없음</div>
+            <div class="stat-value" style="color:#d97706;">${skippedNoTracking}<span class="stat-unit">건</span></div>
+            <div class="stat-change">O열 비어있어 제외됨</div>
+          </div>
+        </div>
+        <div class="card" style="padding:24px 24px 20px;">
+          <div class="preview-action-bar">
+            <div class="bar-left">
+              <span class="card-title" style="margin:0;font-size:15px;">송장 변환 미리보기</span>
+              ${skippedTotal > 0 ? '<span class="badge badge-orange">⚠ 제외 ' + skippedTotal + '건</span>' : '<span class="badge badge-green">✓ 정상</span>'}
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="resetTab2Upload()">↺ 다시 업로드</button>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>상품주문번호</th>
+                  <th>배송방법</th>
+                  <th>택배사</th>
+                  <th>송장번호</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows || '<tr><td colspan="4" style="text-align:center;padding:32px;color:#9ca3af;">변환된 송장이 없습니다.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+          <hr class="divider" style="margin:20px 0 16px;" />
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-primary" onclick="handleTab2DownloadClick()">
+                ⬇️ 송장 다운로드
+              </button>
+              <button class="btn btn-success" onclick="handleTab2SaveClick()">
+                💾 확정 저장
+              </button>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-secondary btn-sm" onclick="undoLastChange()">
+                ↩ 되돌리기
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="resetTab2Upload()">
+                ↺ 다시 업로드
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ===== Task 6: 탭2 파일 업로드 처리 =====
+    async function handleTab2Upload(file) {
+      if (!file) return;
+      if (!file.name.match(/\.(xlsx|xls)$/i)) {
+        showToast('xlsx 또는 xls 파일만 업로드할 수 있습니다.', 'warning');
+        return;
+      }
+      try {
+        showToast('파일 읽는 중...', 'info', 1500);
+        const { results, skippedNoOrderNo, skippedNoTracking } = await parseTrackingExcel(file);
+
+        // 모듈 수준 변수에 저장
+        convertedTracking = results;
+
+        showToast(`변환 완료: ${results.length}건 (제외 ${skippedNoOrderNo + skippedNoTracking}건)`, 'success');
+        renderTab2Preview(results, skippedNoOrderNo, skippedNoTracking);
+      } catch (err) {
+        console.error(err);
+        showToast('파일 파싱 오류: ' + (err.message || '알 수 없는 오류'), 'error');
+      }
+    }
+
+    function handleTab2FileInput(event) {
+      const file = event.target.files[0];
+      if (file) handleTab2Upload(file);
+    }
+
+    function handleTab2DragOver(event) {
+      event.preventDefault();
+      document.getElementById('tab2-upload-area')?.classList.add('dragover');
+    }
+
+    function handleTab2DragLeave(event) {
+      document.getElementById('tab2-upload-area')?.classList.remove('dragover');
+    }
+
+    function handleTab2Drop(event) {
+      event.preventDefault();
+      document.getElementById('tab2-upload-area')?.classList.remove('dragover');
+      const file = event.dataTransfer.files[0];
+      if (file) handleTab2Upload(file);
+    }
+
+    // ===== Task 6: 탭2 다시 업로드 =====
+    function resetTab2Upload() {
+      convertedTracking = null;
+      renderTab2Upload();
+    }
+
+    // ===== Task 6: 탭2 다운로드 버튼 핸들러 =====
+    async function handleTab2DownloadClick() {
+      if (!convertedTracking || convertedTracking.length === 0) {
+        showToast('변환된 송장이 없습니다.', 'warning');
+        return;
+      }
+      await downloadTrackingExcel(convertedTracking);
+      // 워크플로우 step 3 활성화
+      const tab2 = document.getElementById('tab2');
+      if (tab2) {
+        const wfEl = tab2.querySelector('.workflow-steps');
+        if (wfEl) wfEl.outerHTML = renderWorkflowStepsTab2(3);
+      }
+    }
+
+    // ===== Task 6: 탭2 확정 저장 버튼 핸들러 =====
+    function handleTab2SaveClick() {
+      if (!convertedTracking || convertedTracking.length === 0) {
+        showToast('저장할 송장이 없습니다.', 'warning');
+        return;
+      }
+      updateShippingStatus(convertedTracking);
+    }
+
+    // ===== Task 7+8: 옵션별 매출 집계 =====
+    function aggregateByOption(orders) {
+      const map = {};
+      orders.forEach(o => {
+        const key = o.option || '(옵션 없음)';
+        if (!map[key]) map[key] = { option: key, count: 0, amount: 0 };
+        map[key].count  += 1;
+        map[key].amount += Number(o.amount) || 0;
+      });
+      const total = Object.values(map).reduce((s, r) => s + r.amount, 0);
+      return Object.values(map).map(r => ({
+        ...r,
+        pct: total > 0 ? Math.round((r.amount / total) * 100) : 0
+      }));
+    }
+
+    // ===== Task 8: 주문 검색 =====
+    function searchOrders(query) {
+      const round = getActiveRound();
+      if (!round) return [];
+      const q = query.trim().toLowerCase();
+      if (!q) return [];
+      return round.orders.filter(o =>
+        (o.recipientName || '').toLowerCase().includes(q) ||
+        (o.phone || '').includes(q)
+      );
+    }
+
+    // ===== Task 8: 전체 주문 엑셀 다운로드 =====
+    function downloadAllOrdersExcel() {
+      const round = getActiveRound();
+      if (!round) { showToast('활성 공구 라운드가 없습니다.', 'warning'); return; }
+      if (round.orders.length === 0) { showToast('주문 데이터가 없습니다.', 'warning'); return; }
+      const wsData = [['수취인명', '연락처', '옵션', '수량', '금액', '주소', '발송상태', '송장번호', '주문일시']];
+      round.orders.forEach(o => {
+        wsData.push([
+          o.recipientName, o.phone, o.option, o.quantity, o.amount, o.address,
+          o.status === 'shipped' ? '발송완료' : '발송대기',
+          o.trackingNo, o.orderedAt
+        ]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '전체주문');
+      XLSX.writeFile(wb, `${round.name}_전체주문.xlsx`);
+      showToast(`${round.name}_전체주문.xlsx 다운로드 완료`, 'success');
+    }
+
+    // ===== Task 8: 옵션별 매출 엑셀 다운로드 =====
+    function downloadOptionExcel() {
+      const round = getActiveRound();
+      if (!round) { showToast('활성 공구 라운드가 없습니다.', 'warning'); return; }
+      if (round.orders.length === 0) { showToast('주문 데이터가 없습니다.', 'warning'); return; }
+      const rows = aggregateByOption(round.orders);
+      const wsData = [['옵션명', '주문 수', '금액', '비중(%)']];
+      rows.forEach(r => wsData.push([r.option, r.count, r.amount, r.pct + '%']));
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '옵션별매출');
+      XLSX.writeFile(wb, `${round.name}_옵션별매출.xlsx`);
+      showToast(`${round.name}_옵션별매출.xlsx 다운로드 완료`, 'success');
+    }
+
+    // ===== Task 7: 대시보드 필터 변경 =====
+    function setDashboardFilter(filter) {
+      dashboardFilter = filter;
+      renderDashboard();
+    }
+
+    // ===== Task 7: 검색 핸들러 =====
+    function handleDashboardSearch() {
+      const input = document.getElementById('dashboard-search-input');
+      if (!input) return;
+      const results = searchOrders(input.value);
+      const tbody = document.getElementById('search-results-body');
+      if (!tbody) return;
+      if (!input.value.trim()) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#9ca3af;">수취인명 또는 연락처를 입력하세요</td></tr>';
+        return;
+      }
+      if (results.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#9ca3af;">검색 결과가 없습니다</td></tr>';
+        return;
+      }
+      tbody.innerHTML = results.map(o => `
+        <tr>
+          <td>${escapeHtml(o.recipientName)}</td>
+          <td>${escapeHtml(o.phone)}</td>
+          <td style="max-width:160px;white-space:normal;">${escapeHtml(o.option)}</td>
+          <td style="max-width:200px;white-space:normal;">${escapeHtml(o.address)}</td>
+          <td><span class="badge ${o.status === 'shipped' ? 'badge-green' : 'badge-orange'}">${o.status === 'shipped' ? '발송완료' : '발송대기'}</span></td>
+          <td>${escapeHtml(o.trackingNo || '-')}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ===== Task 7: 대시보드 전체 렌더링 =====
+    function renderDashboard() {
+      const tab3 = document.getElementById('tab3');
+      if (!tab3) return;
+
+      const round = getActiveRound();
+      if (!round) {
+        renderNoRoundState(tab3, '대시보드');
+        return;
+      }
+
+      const orders = round.orders;
+
+      // 요약 카드 데이터
+      const totalOrders  = orders.length;
+      const shippedCount = orders.filter(o => o.status === 'shipped').length;
+      const pendingCount = totalOrders - shippedCount;
+      const totalAmount  = orders.reduce((s, o) => s + (Number(o.amount) || 0), 0);
+
+      // 옵션별 집계
+      const allRows    = aggregateByOption(orders);
+      const maxAmount  = allRows.length > 0 ? Math.max(...allRows.map(r => r.amount)) : 1;
+
+      // 필터된 테이블 행
+      const filteredRows = dashboardFilter === '전체'
+        ? allRows
+        : allRows.filter(r => r.option === dashboardFilter);
+
+      const totalFilteredCount  = filteredRows.reduce((s, r) => s + r.count, 0);
+      const totalFilteredAmount = filteredRows.reduce((s, r) => s + r.amount, 0);
+
+      // 옵션 필터 칩 HTML
+      const chipOptions = ['전체', ...allRows.map(r => r.option)];
+      const chipsHtml = chipOptions.map(opt =>
+        `<button class="chip${dashboardFilter === opt ? ' active' : ''}" onclick="setDashboardFilter('${escapeHtml(opt).replace(/'/g, "&#39;")}')">
+          ${escapeHtml(opt)}
+        </button>`
+      ).join('');
+
+      // 옵션별 매출 테이블 행 + 차트
+      const optionRowsHtml = filteredRows.length === 0
+        ? `<tr><td colspan="5" style="text-align:center;padding:28px;color:#9ca3af;">아직 주문 데이터가 없습니다</td></tr>`
+        : filteredRows.map(r => {
+            const barWidth = maxAmount > 0 ? Math.round((r.amount / maxAmount) * 100) : 0;
+            return `
+              <tr>
+                <td style="max-width:200px;white-space:normal;">${escapeHtml(r.option)}</td>
+                <td style="text-align:center;">${r.count}</td>
+                <td style="text-align:right;">${r.amount.toLocaleString()}원</td>
+                <td style="text-align:center;">${r.pct}%</td>
+                <td style="min-width:120px;">
+                  <div class="chart-bar-bg">
+                    <div class="chart-bar" style="width:${barWidth}%"></div>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('') +
+          `<tr class="summary-row">
+            <td>합계</td>
+            <td style="text-align:center;">${totalFilteredCount}</td>
+            <td style="text-align:right;">${totalFilteredAmount.toLocaleString()}원</td>
+            <td style="text-align:center;">-</td>
+            <td></td>
+          </tr>`;
+
+      tab3.innerHTML = `
+        <!-- 요약 카드 -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">총 주문 수</div>
+            <div class="stat-value">${totalOrders}<span class="stat-unit">건</span></div>
+            <div class="stat-change">누적 주문</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">발송 완료</div>
+            <div class="stat-value" style="color:#059669;">${shippedCount}<span class="stat-unit">건</span></div>
+            <div class="stat-change">${totalOrders > 0 ? Math.round((shippedCount / totalOrders) * 100) : 0}% 완료</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">발송 대기</div>
+            <div class="stat-value" style="color:${pendingCount > 0 ? '#c2410c' : '#059669'};">${pendingCount}<span class="stat-unit">건</span></div>
+            <div class="stat-change">처리 대기 중</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">총 매출액</div>
+            <div class="stat-value" style="font-size:22px;">${totalAmount.toLocaleString()}</div>
+            <div class="stat-change">원</div>
+          </div>
+        </div>
+
+        <!-- 옵션별 매출 분석 -->
+        <div class="card" style="padding:24px 24px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+            <div class="card-title" style="margin:0;">
+              <span class="card-icon">📊</span> 옵션별 매출 분석
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="downloadOptionExcel()">
+              ⬇️ 옵션별 엑셀
+            </button>
+          </div>
+
+          <!-- 필터 칩 -->
+          <div class="filter-chips">${chipsHtml}</div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>옵션명</th>
+                  <th style="text-align:center;">주문 수</th>
+                  <th style="text-align:right;">금액</th>
+                  <th style="text-align:center;">비중</th>
+                  <th>차트</th>
+                </tr>
+              </thead>
+              <tbody>${optionRowsHtml}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 주문 검색 -->
+        <div class="card" style="padding:24px 24px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+            <div class="card-title" style="margin:0;">
+              <span class="card-icon">🔍</span> 주문 검색
+            </div>
+            <button class="btn btn-success btn-sm" onclick="downloadAllOrdersExcel()">
+              ⬇️ 전체 주문 엑셀
+            </button>
+          </div>
+          <div class="search-input-wrap">
+            <input
+              id="dashboard-search-input"
+              class="search-input"
+              type="text"
+              placeholder="수취인명 또는 연락처로 검색..."
+              onkeyup="handleDashboardSearch()"
+            />
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>수취인명</th>
+                  <th>연락처</th>
+                  <th>옵션</th>
+                  <th>주소</th>
+                  <th>발송상태</th>
+                  <th>송장번호</th>
+                </tr>
+              </thead>
+              <tbody id="search-results-body">
+                <tr><td colspan="6" style="text-align:center;padding:24px;color:#9ca3af;">수취인명 또는 연락처를 입력하세요</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 데이터 백업/복원 -->
+        <div class="card backup-card" style="padding:24px 28px;">
+          <div class="card-title" style="margin-bottom:6px;">
+            <span class="card-icon">🗄️</span> 데이터 백업 / 복원
+          </div>
+          <div class="card-desc" style="margin-bottom:20px;">
+            모든 공구 라운드 데이터를 JSON 파일로 백업하거나, 이전에 저장한 백업 파일로 복원합니다. 복원 시 현재 데이터는 덮어씌워집니다.
+          </div>
+          <div class="backup-actions">
+            <button class="btn btn-primary" onclick="backupData()">
+              ⬇️ 백업 다운로드
+            </button>
+            <button class="btn btn-secondary" onclick="document.getElementById('restore-file-input').click()">
+              📂 백업 파일로 복원
+            </button>
+            <input
+              type="file"
+              id="restore-file-input"
+              accept=".json"
+              style="display:none"
+              onchange="if(this.files[0]) { restoreData(this.files[0]); this.value=''; }"
+            />
+          </div>
+        </div>
+      `;
+    }
+
+    // ===== Task 9: 데이터 백업 (JSON 다운로드) =====
+    function backupData() {
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (!data) { showToast('백업할 데이터가 없습니다', 'error'); return; }
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `odd-order-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('데이터 백업 완료', 'success');
+    }
+
+    // ===== Task 9: 데이터 복원 (JSON 업로드) =====
+    function restoreData(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          JSON.parse(e.target.result); // 유효성 검사
+          saveSnapshot();
+          localStorage.setItem(STORAGE_KEY, e.target.result);
+          convertedOrders = null;
+          convertedTracking = null;
+          refreshUI();
+          showToast('데이터 복원 완료', 'success');
+        } catch {
+          showToast('올바른 백업 파일이 아닙니다', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ===== Task 5: Gmail compose URL 생성 =====
+    function openGmail() {
+      const today = new Date();
+      const yy = String(today.getFullYear()).slice(-2);
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formatted = `${yy}.${mm}.${dd}`;
+      const subject = `[한아원] ${formatted} 한아원 발주서 전달의 건`;
+      const body = `안녕하세요,\n한아원 한로제입니다.\n\n${formatted} 한아원 발주서 전달드립니다.\n확인 후 송장번호 공유 부탁드리겠습니다.\n\n\n감사합니다!\n한로제 드림`;
+      const url = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(CONFIG.email.to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(url, '_blank');
+    }
+
+    // ===== UI 갱신 =====
+    function refreshUI() {
+      renderRoundBanner();
+
+      const round = getActiveRound();
+      const tab1  = document.getElementById('tab1');
+      const tab2  = document.getElementById('tab2');
+
+      if (!round) {
+        if (tab1) renderNoRoundState(tab1, '발주서 변환');
+        if (tab2) renderNoRoundState(tab2, '송장 변환');
+      } else {
+        // 공구가 있을 때: 탭1 업로드 UI 또는 미리보기
+        // convertedOrders가 있으면 이미 renderTab1Preview()가 호출된 상태이므로 덮어쓰지 않음
+        if (tab1 && !convertedOrders) {
+          renderTab1Upload();
+        }
+        // 탭2: convertedTracking이 있으면 미리보기, 없으면 업로드 UI
+        if (tab2 && !convertedTracking) {
+          renderTab2Upload();
+        }
+      }
+
+      // 탭3: 대시보드는 항상 renderDashboard()로 처리 (라운드 없음 상태 포함)
+      renderDashboard();
+    }
+
+    // ===== 탭4: 개인 발주 =====
+    const personalOrders = [];
+    const PERSONAL_PRODUCT_LIST = [
+      { code: 'P00300279', name: 'ODD. M-01 오드 영양제' },
+      { code: 'P00300280', name: '오드 M-01 스타터키트 5일분' },
+      { code: 'P00300281', name: '오드 M-01 리필팩 30일분' },
+      { code: 'P00300282', name: '5일분 3개' },
+      { code: 'P00300283', name: '30일분 1개 + 5일분 2개' },
+      { code: 'P00300284', name: '30일분 2개 + 5일분 3개' },
+      { code: 'P00300285', name: '30일분 3개 + 5일분 4개' },
+    ];
+
+    function addPersonalOrder() {
+      const name = document.getElementById('po-name').value.trim();
+      const phone = document.getElementById('po-phone').value.trim();
+      const address = document.getElementById('po-address').value.trim();
+      const productCode = document.getElementById('po-product').value;
+      const qty = parseInt(document.getElementById('po-qty').value, 10) || 1;
+      const message = document.getElementById('po-message').value.trim();
+
+      if (!name || !phone || !address) {
+        showToast('수취인명, 핸드폰, 주소는 필수입니다.', 'warning');
+        return;
+      }
+
+      const product = PERSONAL_PRODUCT_LIST.find(p => p.code === productCode);
+      personalOrders.push({
+        recipientName: name,
+        phone: phone,
+        address: address,
+        productName: product.name,
+        productCode: product.code,
+        quantity: qty,
+        message: message
+      });
+
+      // 폼 초기화 (상품/수량은 유지)
+      document.getElementById('po-name').value = '';
+      document.getElementById('po-phone').value = '';
+      document.getElementById('po-address').value = '';
+      document.getElementById('po-message').value = '';
+      document.getElementById('po-name').focus();
+
+      renderPersonalOrderTable();
+      showToast(`${name} 추가 완료 (총 ${personalOrders.length}건)`, 'success');
+    }
+
+    function removePersonalOrder(idx) {
+      personalOrders.splice(idx, 1);
+      renderPersonalOrderTable();
+    }
+
+    function renderPersonalOrderTable() {
+      const card = document.getElementById('personal-order-list-card');
+      const tbody = document.getElementById('personal-order-tbody');
+      const countEl = document.getElementById('po-count');
+
+      if (personalOrders.length === 0) {
+        card.style.display = 'none';
+        return;
+      }
+
+      card.style.display = 'block';
+      countEl.textContent = personalOrders.length;
+
+      tbody.innerHTML = personalOrders.map((o, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${o.recipientName}</td>
+          <td>${o.phone}</td>
+          <td>${o.address}</td>
+          <td>${o.productName}</td>
+          <td>${o.quantity}</td>
+          <td>${o.message || '-'}</td>
+          <td><button class="btn-delete" onclick="removePersonalOrder(${i})" title="삭제">✕</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function downloadPersonalOrderExcel() {
+      if (personalOrders.length === 0) {
+        showToast('추가된 발주 항목이 없습니다.', 'warning');
+        return;
+      }
+
+      const orders = personalOrders.map((o, i) => ({
+        seq: i + 1,
+        recipientName: o.recipientName,
+        productName: o.productName,
+        quantity: o.quantity,
+        phone: o.phone,
+        phone2: '',
+        address: o.address,
+        message: o.message,
+        productOrderNo: '',
+        productCode: o.productCode
+      }));
+
+      const today = new Date().toISOString().slice(0, 10);
+      const headers = ['보내는분', '보내는분 연락처', '주소', '번호', '수취인명', '상품명', '수량', '핸드폰', '기타연락처', '주소', '배송메세지', '상품주문번호', '상품고유코드', '배송방식', '운송장번호', '택배사'];
+      const colWidths = [10, 16, 30, 6, 10, 28, 6, 16, 16, 40, 22, 20, 14, 12, 16, 12];
+
+      const wb = await XlsxPopulate.fromBlankAsync();
+      const ws = wb.sheet(0).name('발주서');
+
+      headers.forEach((h, i) => ws.cell(1, i + 1).value(h));
+      ws.range('D1:P1').style('fill', 'FFFF00');
+      ws.range('A1:P1').style('bold', true);
+
+      orders.forEach((o, idx) => {
+        const r = idx + 2;
+        ws.cell(r, 1).value(CONFIG.sender.name);
+        ws.cell(r, 2).value(CONFIG.sender.phone);
+        ws.cell(r, 3).value(CONFIG.sender.address);
+        ws.cell(r, 4).value(o.seq);
+        ws.cell(r, 5).value(o.recipientName);
+        ws.cell(r, 6).value(o.productName);
+        ws.cell(r, 7).value(o.quantity);
+        ws.cell(r, 8).value(String(o.phone || '')).style('numberFormat', '@');
+        ws.cell(r, 9).value(String(o.phone2 || '')).style('numberFormat', '@');
+        ws.cell(r, 10).value(o.address);
+        ws.cell(r, 11).value(o.message);
+        ws.cell(r, 12).value('').style('numberFormat', '@');
+        ws.cell(r, 13).value(o.productCode);
+        ws.cell(r, 14).value('');
+        ws.cell(r, 15).value('');
+        ws.cell(r, 16).value('');
+      });
+
+      colWidths.forEach((w, i) => ws.column(i + 1).width(w));
+      ws.range('A1:P' + (orders.length + 1)).autoFilter();
+
+      const refSheet = wb.addSheet('참조');
+      const refData = [
+        ['상품명', '상품코드'],
+        ...PERSONAL_PRODUCT_LIST.map(p => [p.name, p.code])
+      ];
+      refData.forEach((row, r) => {
+        row.forEach((val, c) => refSheet.cell(r + 1, c + 1).value(val));
+      });
+      refSheet.column(1).width(30);
+      refSheet.column(2).width(14);
+
+      const blob = await wb.outputAsync();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `개인발주서_${today}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`개인발주서_${today}.xlsx 다운로드 완료 (${orders.length}건)`, 'success');
+    }
+
+    function clearPersonalOrders() {
+      if (personalOrders.length === 0) return;
+      if (!confirm(`${personalOrders.length}건을 모두 삭제하시겠습니까?`)) return;
+      personalOrders.length = 0;
+      renderPersonalOrderTable();
+      showToast('목록이 초기화되었습니다.', 'info');
+    }
+
+    // ===== Tab Navigation =====
+    function switchTab(tabId) {
+      // Deactivate all tabs and buttons
+      document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+      });
+
+      // Activate selected tab
+      const targetContent = document.getElementById(tabId);
+      if (targetContent) {
+        targetContent.classList.add('active');
+      }
+
+      // Activate the clicked button
+      const tabIndex = { tab1: 0, tab2: 1, tab3: 2, tab4: 3 };
+      const btnIndex = tabIndex[tabId];
+      const btns = document.querySelectorAll('.tab-btn');
+      if (btns[btnIndex] !== undefined) {
+        btns[btnIndex].classList.add('active');
+        btns[btnIndex].setAttribute('aria-selected', 'true');
+      }
+    }
+
+    // ===== Toast =====
+    function showToast(message, type = 'info', duration = 3500) {
+      const icons = {
+        success: '✅',
+        error:   '❌',
+        warning: '⚠️',
+        info:    'ℹ️',
+      };
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+
+      const icon = document.createElement('span');
+      icon.className = 'toast-icon';
+      icon.textContent = icons[type] || icons.info;
+
+      const msg = document.createElement('span');
+      msg.className = 'toast-msg';
+      msg.textContent = message;
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'toast-close';
+      closeBtn.textContent = '✕';
+      closeBtn.onclick = () => dismissToast(toast);
+
+      toast.appendChild(icon);
+      toast.appendChild(msg);
+      toast.appendChild(closeBtn);
+      container.appendChild(toast);
+
+      // Auto-dismiss
+      setTimeout(() => dismissToast(toast), duration);
+    }
+
+    function dismissToast(toast) {
+      if (!toast || !toast.parentElement) return;
+      toast.classList.add('hide');
+      toast.addEventListener('animationend', () => toast.remove(), { once: true });
+    }
+
+    // ===== Modal =====
+    function openModal(html) {
+      const overlay = document.getElementById('modal-overlay');
+      overlay.innerHTML = `<div class="modal-box">${html}</div>`;
+      overlay.classList.add('open');
+    }
+
+    function closeModal() {
+      const overlay = document.getElementById('modal-overlay');
+      overlay.classList.remove('open');
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('modal-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // ===== Init =====
+    // 페이지 로드 시 UI 초기화 (배너 + 탭 빈 상태 처리)
+    refreshUI();
+  </script>
+</body>
+</html>
