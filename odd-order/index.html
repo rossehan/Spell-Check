@@ -1360,8 +1360,8 @@
       validOrderStatuses: ['결제완료', '발주확인', '발송대기']
     };
 
-    // ===== 상품 매핑 테이블 (긴 문자열 우선 순서) =====
-    const PRODUCT_MAP = [
+    // ===== 상품 매핑 테이블: 네이버 (긴 문자열 우선 순서) =====
+    const PRODUCT_MAP_NAVER = [
       { match: '30일분 3개 + 5일분 4개(110개입)', name: '30일분 3개 + 5일분 4개', code: 'P00300285' },
       { match: '30일분 2개 + 5일분 3개(75개입)',  name: '30일분 2개 + 5일분 3개', code: 'P00300284' },
       { match: '30일분 1개 + 5일분 2개(40개입)',  name: '30일분 1개 + 5일분 2개', code: 'P00300283' },
@@ -1370,19 +1370,30 @@
       { match: '30일분',                          name: '오드 M-01 리필팩 30일분',   code: 'P00300281' }
     ];
 
+    // ===== 상품 매핑 테이블: 쿠팡 (vendorItemId 기반) =====
+    const PRODUCT_MAP_COUPANG = {
+      '95241053251': { code: 'P00300280', name: '오드 M-01 스타터키트 5일분' },
+      '95241053249': { code: 'P00300281', name: '오드 M-01 리필팩 30일분' },
+    };
+
     // 옵션정보가 없을 때 상품명으로 매핑
     const DEFAULT_PRODUCT = { name: 'ODD. M-01 오드 영양제', code: 'P00300279' };
 
     function mapProduct(optionText, productName) {
       const trimmed = (optionText || '').trim();
       if (trimmed) {
-        for (const item of PRODUCT_MAP) {
+        for (const item of PRODUCT_MAP_NAVER) {
           if (trimmed.includes(item.match)) return item;
         }
         return null;
       }
       // 옵션정보 없음 → 단일 상품
       return DEFAULT_PRODUCT;
+    }
+
+    // 쿠팡 주문 매핑 (vendorItemId → matchKey로 전달됨)
+    function mapCoupangProduct(matchKey) {
+      return PRODUCT_MAP_COUPANG[matchKey] || null;
     }
 
     // ===== localStorage 헬퍼 =====
@@ -1766,14 +1777,14 @@
       tab1.innerHTML = `
         ${renderWorkflowSteps(1)}
         <div class="card">
-          <div class="card-title"><span class="card-icon">📋</span> 스마트스토어 주문서 업로드</div>
-          <div class="card-desc">네이버 API에서 주문을 자동으로 가져오거나, 엑셀 파일을 직접 업로드하세요.</div>
+          <div class="card-title"><span class="card-icon">📋</span> 주문서 업로드</div>
+          <div class="card-desc">네이버 + 쿠팡 주문을 자동으로 가져오거나, 엑셀 파일을 직접 업로드하세요.</div>
           <div class="fetch-orders-section">
             <button class="btn btn-primary btn-lg" id="btn-fetch-orders" onclick="handleFetchOrders()">
-              주문 가져오기 (네이버 API)
+              주문 가져오기 (네이버 + 쿠팡)
             </button>
             <button class="btn btn-secondary" onclick="handleDemoOrders()">테스트 데이터</button>
-            <span class="fetch-hint">최근 24시간 결제완료 주문을 자동으로 가져옵니다</span>
+            <span class="fetch-hint">최근 24시간 결제완료 주문을 네이버·쿠팡에서 동시에 가져옵니다</span>
           </div>
           <div class="divider-or"><span>또는 엑셀 직접 업로드</span></div>
           <div class="upload-area" id="tab1-upload-area"
@@ -1925,7 +1936,7 @@
       renderTab1Preview(results, 0);
     }
 
-    // ===== 탭1: 네이버 API로 주문 가져오기 =====
+    // ===== 탭1: 네이버 + 쿠팡 API 병렬 주문 가져오기 =====
     async function handleFetchOrders() {
       const btn = document.getElementById('btn-fetch-orders');
       if (btn) {
@@ -1934,28 +1945,45 @@
       }
 
       try {
-        showToast('네이버 API에서 주문을 가져오는 중...', 'info', 3000);
-        const res = await fetch('/api/orders');
-        const data = await res.json();
+        showToast('네이버 + 쿠팡에서 주문을 가져오는 중...', 'info', 3000);
 
-        if (!data.success) {
-          throw new Error(data.error || '주문 가져오기 실패');
+        const [naverResult, coupangResult] = await Promise.allSettled([
+          fetch('/api/orders').then(r => r.json()),
+          fetch('/api/coupang-orders').then(r => r.json()),
+        ]);
+
+        // 네이버 주문 처리
+        let naverOrders = [];
+        let naverError = null;
+        if (naverResult.status === 'fulfilled' && naverResult.value.success) {
+          naverOrders = naverResult.value.orders || [];
+        } else {
+          naverError = naverResult.status === 'rejected'
+            ? naverResult.reason?.message
+            : naverResult.value?.error || '네이버 주문 가져오기 실패';
+          console.error('[fetch-orders] naver failed:', naverError);
         }
 
-        if (data.orders.length === 0) {
-          showToast('최근 24시간 내 결제완료 주문이 없습니다.', 'warning');
-          if (btn) {
-            btn.disabled = false;
-            btn.textContent = '주문 가져오기 (네이버 API)';
-          }
-          return;
+        // 쿠팡 주문 처리
+        let coupangOrders = [];
+        let coupangError = null;
+        let coupangWarning = null;
+        if (coupangResult.status === 'fulfilled' && coupangResult.value.success) {
+          coupangOrders = coupangResult.value.orders || [];
+          coupangWarning = coupangResult.value.warning;
+        } else {
+          coupangError = coupangResult.status === 'rejected'
+            ? coupangResult.reason?.message
+            : coupangResult.value?.error || '쿠팡 주문 가져오기 실패';
+          console.error('[fetch-orders] coupang failed:', coupangError);
         }
 
-        // API 응답을 convertOrders와 동일한 형태로 변환
-        const results = data.orders.map((o, idx) => {
+        // 네이버 주문 → 내부 포맷 변환
+        const naverConverted = naverOrders.map((o, idx) => {
           const product = mapProduct(o.productOption, o.productName);
           return {
             seq: idx + 1,
+            channel: 'naver',
             recipientName: o.recipientName,
             productName: product ? product.name : '',
             productCode: product ? product.code : '',
@@ -1972,19 +2000,67 @@
           };
         });
 
+        // 쿠팡 주문 → 내부 포맷 변환 (서버에서 이미 정규화된 shape)
+        const coupangConverted = coupangOrders.map((o, idx) => {
+          const product = mapCoupangProduct(o.matchKey);
+          return {
+            seq: naverConverted.length + idx + 1,
+            channel: 'coupang',
+            recipientName: o.recipientName,
+            productName: product ? product.name : '',
+            productCode: product ? product.code : '',
+            mappingFailed: !product,
+            quantity: o.quantity,
+            phone: o.phone,
+            phone2: o.phone2 || '',
+            address: ((o.baseAddress || '') + ' ' + (o.detailedAddress || '')).trim(),
+            message: o.deliveryMemo || '',
+            productOrderNo: o.productOrderId,
+            amount: o.totalPaymentAmount || 0,
+            option: o.productOption || '',
+            orderedAt: o.orderDate || ''
+          };
+        });
+
+        // 병합
+        const results = [...naverConverted, ...coupangConverted];
+
+        if (results.length === 0 && !naverError && !coupangError) {
+          showToast('최근 24시간 내 결제완료 주문이 없습니다.', 'warning');
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = '주문 가져오기 (네이버 + 쿠팡)';
+          }
+          return;
+        }
+
         convertedOrders = results;
         const dupes = checkDuplicates(results);
         if (dupes.length > 0) {
           showToast(`중복 주문 ${dupes.length}건이 감지되었습니다.`, 'warning', 5000);
         }
-        showToast(`API에서 ${results.length}건 가져옴`, 'success');
+
+        // 결과 알림
+        const parts = [];
+        if (naverOrders.length > 0) parts.push(`네이버 ${naverOrders.length}건`);
+        if (coupangOrders.length > 0) parts.push(`쿠팡 ${coupangOrders.length}건`);
+        if (parts.length > 0) {
+          showToast(`API에서 ${parts.join(' + ')} 가져옴 (총 ${results.length}건)`, 'success');
+        }
+        if (naverError) showToast(`네이버 오류: ${naverError}`, 'error', 5000);
+        if (coupangError) showToast(`쿠팡 오류: ${coupangError}`, 'error', 5000);
+        if (coupangWarning === 'MAX_PAGE_REACHED') {
+          showToast('쿠팡 주문이 50건을 초과할 수 있습니다. 누락 주문이 없는지 확인하세요.', 'warning', 8000);
+        }
+
         renderTab1Preview(results, 0);
       } catch (err) {
         console.error(err);
         showToast('API 오류: ' + (err.message || '알 수 없는 오류'), 'error');
+      } finally {
         if (btn) {
           btn.disabled = false;
-          btn.textContent = '주문 가져오기 (네이버 API)';
+          btn.textContent = '주문 가져오기 (네이버 + 쿠팡)';
         }
       }
     }
