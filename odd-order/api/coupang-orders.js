@@ -43,8 +43,8 @@ function buildAuthorization({ method, path, query, accessKey, secretKey }) {
 async function fetchCoupangOrderSheets({ accessKey, secretKey, vendorId }) {
   const now = new Date();
   const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const createdAtFrom = toKstIsoString(from);
-  const createdAtTo = toKstIsoString(now);
+  const createdAtFrom = toKstIsoString(from).slice(0, 10);
+  const createdAtTo = toKstIsoString(now).slice(0, 10);
 
   const path = `${API_PATH_PREFIX}/${vendorId}/ordersheets`;
   const query =
