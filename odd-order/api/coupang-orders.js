@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { ProxyAgent, fetch as proxyFetch } from 'undici';
 
 const COUPANG_HOST = 'https://api-gateway.coupang.com';
 const API_PATH_PREFIX = '/v2/providers/openapi/apis/api/v4/vendors';
@@ -61,13 +62,20 @@ async function fetchCoupangOrderSheets({ accessKey, secretKey, vendorId }) {
   });
 
   const url = `${COUPANG_HOST}${path}?${query}`;
-  const res = await fetch(url, {
+  const fetchOptions = {
     method: 'GET',
     headers: {
       Authorization: authorization,
       'Content-Type': 'application/json',
     },
-  });
+  };
+
+  // 프록시 설정 (Vercel 서버리스 IP 고정용)
+  if (process.env.PROXY_URL) {
+    fetchOptions.dispatcher = new ProxyAgent(process.env.PROXY_URL);
+  }
+
+  const res = await proxyFetch(url, fetchOptions);
 
   if (!res.ok) {
     const text = await res.text();
