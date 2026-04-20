@@ -1942,7 +1942,7 @@
             <td style="text-align:center;">${channelBadge}</td>
             <td>${escapeHtml(o.recipientName)}</td>
             <td>${productCell}</td>
-            <td style="text-align:center;">${escapeHtml(String(o.quantity))}</td>
+            <td style="text-align:center;"><span class="product-editable" onclick="openQuantityEdit(${idx})" title="클릭하여 수량 변경">${escapeHtml(String(o.quantity))}</span></td>
             <td>${escapeHtml(o.phone)}</td>
             <td style="max-width:220px;white-space:normal;">${escapeHtml(o.address)}</td>
             <td style="max-width:160px;white-space:normal;">${escapeHtml(o.message)}</td>
@@ -2090,8 +2090,35 @@
     }
 
     function cancelProductSelect(idx) {
-      // blur 시 원래 상품명으로 복원
       setTimeout(() => renderTab1Preview(convertedOrders, 0), 150);
+    }
+
+    // ===== 탭1: 수량 변경 =====
+    function openQuantityEdit(idx) {
+      if (!convertedOrders || !convertedOrders[idx]) return;
+      const order = convertedOrders[idx];
+      const table = document.querySelector('#tab1 table tbody');
+      if (!table) return;
+      const row = table.rows[idx];
+      if (!row) return;
+      const cell = row.cells[4]; // 수량은 5번째 (index 4)
+      cell.innerHTML = `<input type="number" min="1" value="${order.quantity}" style="width:50px;text-align:center;font-size:13px;padding:4px;border:1px solid #6366f1;border-radius:6px;" onkeydown="if(event.key==='Enter')changeQuantity(${idx},this.value)" onblur="changeQuantity(${idx},this.value)" autofocus />`;
+      cell.querySelector('input').focus();
+      cell.querySelector('input').select();
+    }
+
+    function changeQuantity(idx, val) {
+      if (!convertedOrders || !convertedOrders[idx]) return;
+      const num = parseInt(val, 10);
+      if (!num || num < 1) {
+        renderTab1Preview(convertedOrders, 0);
+        return;
+      }
+      if (num !== convertedOrders[idx].quantity) {
+        convertedOrders[idx].quantity = num;
+        showToast(`#${convertedOrders[idx].seq} 수량 변경: ${num}`, 'success', 2000);
+      }
+      renderTab1Preview(convertedOrders, 0);
     }
 
     // ===== 탭1: 네이버 + 쿠팡 API 병렬 주문 가져오기 =====
@@ -2548,27 +2575,34 @@
         downloaded += naverData.length;
       }
 
-      // 쿠팡 송장
+      // 쿠팡 송장 (시간차 다운로드 — 브라우저 동시 다운로드 차단 방지)
       if (coupangData.length > 0) {
-        const wb = await XlsxPopulate.fromBlankAsync();
-        const ws = wb.sheet(0).name('발송처리');
-        const headers = ['주문번호', '택배사', '송장번호'];
-        headers.forEach((h, i) => ws.cell(1, i + 1).value(h));
-        ws.range('A1:C1').style({ bold: true, fill: 'FFE0E0' });
-        coupangData.forEach((t, idx) => {
-          const r = idx + 2;
-          ws.cell(r, 1).value(String(t.productOrderNo)).style('numberFormat', '@');
-          ws.cell(r, 2).value(CONFIG.shipping.courier);
-          ws.cell(r, 3).value(String(t.trackingNo || '')).style('numberFormat', '@');
-        });
-        [22, 14, 18].forEach((w, i) => ws.column(i + 1).width(w));
-        const blob = await wb.outputAsync();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = '쿠팡_송장업로드.xlsx';
-        a.click();
-        URL.revokeObjectURL(url);
+        const dlCoupang = async () => {
+          const wb = await XlsxPopulate.fromBlankAsync();
+          const ws = wb.sheet(0).name('발송처리');
+          const headers = ['주문번호', '택배사', '송장번호'];
+          headers.forEach((h, i) => ws.cell(1, i + 1).value(h));
+          ws.range('A1:C1').style({ bold: true, fill: 'FFE0E0' });
+          coupangData.forEach((t, idx) => {
+            const r = idx + 2;
+            ws.cell(r, 1).value(String(t.productOrderNo)).style('numberFormat', '@');
+            ws.cell(r, 2).value(CONFIG.shipping.courier);
+            ws.cell(r, 3).value(String(t.trackingNo || '')).style('numberFormat', '@');
+          });
+          [22, 14, 18].forEach((w, i) => ws.column(i + 1).width(w));
+          const blob = await wb.outputAsync();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = '쿠팡_송장업로드.xlsx';
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+        if (naverData.length > 0) {
+          setTimeout(dlCoupang, 1000);
+        } else {
+          await dlCoupang();
+        }
         downloaded += coupangData.length;
       }
 
