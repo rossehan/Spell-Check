@@ -34,7 +34,7 @@ async function getAccessToken() {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`토큰 발급 실패 (${res.status}): ${text}`);
+    throw new Error(`토큰 발급 실패 (${res.status}): ${text} [DEBUG id_len=${clientId.length} secret_len=${clientSecret.length} secret_first3=${clientSecret.slice(0,3)}]`);
   }
 
   const data = await res.json();
