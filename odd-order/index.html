@@ -1928,7 +1928,7 @@
       const coupangCount = results.filter(o => o.channel === 'coupang').length;
 
       let rows = '';
-      results.forEach(o => {
+      results.forEach((o, idx) => {
         const failClass = o.mappingFailed ? ' mapping-failed' : '';
         const productCell = o.mappingFailed
           ? `<span class="product-editable" onclick="openProductSelect(${idx})" title="클릭하여 상품 선택"><span class="mapping-warn-badge">⚠ 매핑 실패</span> <small style="color:#9ca3af;">${escapeHtml(o.option)}</small></span>`
