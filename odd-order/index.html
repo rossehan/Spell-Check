@@ -982,6 +982,22 @@
       color: #dc2626;
     }
 
+    .channel-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .channel-naver {
+      background: #03c75a;
+      color: #fff;
+    }
+    .channel-coupang {
+      background: #e4002b;
+      color: #fff;
+    }
     .mapping-warn-badge {
       display: inline-flex;
       align-items: center;
@@ -1880,15 +1896,22 @@
 
       const failCount = results.filter(o => o.mappingFailed).length;
 
+      const naverCount = results.filter(o => o.channel === 'naver').length;
+      const coupangCount = results.filter(o => o.channel === 'coupang').length;
+
       let rows = '';
       results.forEach(o => {
         const failClass = o.mappingFailed ? ' mapping-failed' : '';
         const productCell = o.mappingFailed
           ? `<span class="mapping-warn-badge">⚠ 매핑 실패</span> <small style="color:#9ca3af;">${escapeHtml(o.option)}</small>`
           : escapeHtml(o.productName);
+        const channelBadge = o.channel === 'coupang'
+          ? '<span class="channel-badge channel-coupang">쿠팡</span>'
+          : '<span class="channel-badge channel-naver">네이버</span>';
         rows += `
           <tr class="${failClass}">
             <td>${o.seq}</td>
+            <td style="text-align:center;">${channelBadge}</td>
             <td>${escapeHtml(o.recipientName)}</td>
             <td>${productCell}</td>
             <td style="text-align:center;">${escapeHtml(String(o.quantity))}</td>
@@ -1906,7 +1929,7 @@
           <div class="stat-card">
             <div class="stat-label">변환 완료</div>
             <div class="stat-value">${results.length}<span class="stat-unit">건</span></div>
-            <div class="stat-change">결제완료 + 발주확인 주문</div>
+            <div class="stat-change">${naverCount > 0 ? '<span class="channel-badge channel-naver" style="font-size:10px;">네이버 ' + naverCount + '</span> ' : ''}${coupangCount > 0 ? '<span class="channel-badge channel-coupang" style="font-size:10px;">쿠팡 ' + coupangCount + '</span>' : ''}</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">제외됨</div>
@@ -1932,6 +1955,7 @@
               <thead>
                 <tr>
                   <th>번호</th>
+                  <th>채널</th>
                   <th>수취인명</th>
                   <th>상품명</th>
                   <th>수량</th>
@@ -1942,7 +1966,7 @@
                 </tr>
               </thead>
               <tbody>
-                ${rows || '<tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af;">변환된 주문이 없습니다.</td></tr>'}
+                ${rows || '<tr><td colspan="9" style="text-align:center;padding:32px;color:#9ca3af;">변환된 주문이 없습니다.</td></tr>'}
               </tbody>
             </table>
           </div>
@@ -1975,17 +1999,18 @@
     // ===== 탭1: 테스트 더미 데이터 =====
     function handleDemoOrders() {
       const demoData = [
-        { recipientName: '김철수', phone: '010-1234-5678', phone2: '', baseAddress: '서울시 강남구 테헤란로 123', detailedAddress: '4층 401호', deliveryMemo: '부재시 문 앞에 놓아주세요', productOption: '', productName: 'ODD. M-01 오드 영양제', quantity: 1, productOrderId: '2026040800001', totalPaymentAmount: 39000, orderDate: '2026-04-08' },
-        { recipientName: '이영희', phone: '010-9876-5432', phone2: '02-555-1234', baseAddress: '경기도 성남시 분당구 판교로 256', detailedAddress: '판교테크노밸리 B동', deliveryMemo: '경비실에 맡겨주세요', productOption: '30일분', productName: '', quantity: 2, productOrderId: '2026040800002', totalPaymentAmount: 110000, orderDate: '2026-04-08' },
-        { recipientName: '박지민', phone: '010-5555-7777', phone2: '', baseAddress: '부산시 해운대구 해운대해변로 30', detailedAddress: '해운대아파트 102동 803호', deliveryMemo: '', productOption: '5일분 1개', productName: '', quantity: 1, productOrderId: '2026040800003', totalPaymentAmount: 15000, orderDate: '2026-04-08' },
-        { recipientName: '최수진', phone: '010-3333-4444', phone2: '', baseAddress: '대전시 유성구 대학로 99', detailedAddress: '', deliveryMemo: '배송 전 연락 부탁드립니다', productOption: '5일분 3개(15개입)', productName: '', quantity: 1, productOrderId: '2026040800004', totalPaymentAmount: 42000, orderDate: '2026-04-08' },
-        { recipientName: '정민호', phone: '010-8888-9999', phone2: '', baseAddress: '인천시 연수구 송도대로 123', detailedAddress: '트리플스트리트 C동 15층', deliveryMemo: '', productOption: '30일분 2개 + 5일분 3개(75개입)', productName: '', quantity: 1, productOrderId: '2026040800005', totalPaymentAmount: 195000, orderDate: '2026-04-08' },
+        { channel: 'naver', recipientName: '김철수', phone: '010-1234-5678', phone2: '', baseAddress: '서울시 강남구 테헤란로 123', detailedAddress: '4층 401호', deliveryMemo: '부재시 문 앞에 놓아주세요', productOption: '', productName: 'ODD. M-01 오드 영양제', quantity: 1, productOrderId: '2026040800001', totalPaymentAmount: 39000, orderDate: '2026-04-08' },
+        { channel: 'naver', recipientName: '이영희', phone: '010-9876-5432', phone2: '02-555-1234', baseAddress: '경기도 성남시 분당구 판교로 256', detailedAddress: '판교테크노밸리 B동', deliveryMemo: '경비실에 맡겨주세요', productOption: '30일분', productName: '', quantity: 2, productOrderId: '2026040800002', totalPaymentAmount: 110000, orderDate: '2026-04-08' },
+        { channel: 'coupang', recipientName: '박지민', phone: '010-5555-7777', phone2: '', baseAddress: '부산시 해운대구 해운대해변로 30', detailedAddress: '해운대아파트 102동 803호', deliveryMemo: '', productOption: '5일분 1개', productName: '', quantity: 1, productOrderId: '2026040800003', totalPaymentAmount: 15000, orderDate: '2026-04-08' },
+        { channel: 'coupang', recipientName: '최수진', phone: '010-3333-4444', phone2: '', baseAddress: '대전시 유성구 대학로 99', detailedAddress: '', deliveryMemo: '배송 전 연락 부탁드립니다', productOption: '5일분 3개(15개입)', productName: '', quantity: 1, productOrderId: '2026040800004', totalPaymentAmount: 42000, orderDate: '2026-04-08' },
+        { channel: 'naver', recipientName: '정민호', phone: '010-8888-9999', phone2: '', baseAddress: '인천시 연수구 송도대로 123', detailedAddress: '트리플스트리트 C동 15층', deliveryMemo: '', productOption: '30일분 2개 + 5일분 3개(75개입)', productName: '', quantity: 1, productOrderId: '2026040800005', totalPaymentAmount: 195000, orderDate: '2026-04-08' },
       ];
 
       const results = demoData.map((o, idx) => {
         const product = mapProduct(o.productOption, o.productName);
         return {
           seq: idx + 1,
+          channel: o.channel || 'naver',
           recipientName: o.recipientName,
           productName: product ? product.name : '',
           productCode: product ? product.code : '',
@@ -2210,8 +2235,8 @@
     async function downloadOrderExcel(orders) {
       const now = new Date();
       const today = `${String(now.getFullYear()).slice(2)}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
-      const headers = ['보내는분', '보내는분 연락처', '주소', '번호', '수취인명', '상품명', '수량', '핸드폰', '기타연락처', '주소', '배송메세지', '상품주문번호', '상품고유코드', '배송방식', '운송장번호', '택배사'];
-      const colWidths = [10, 16, 30, 6, 10, 28, 6, 16, 16, 40, 22, 20, 14, 12, 16, 12];
+      const headers = ['보내는분', '보내는분 연락처', '주소', '번호', '수취인명', '상품명', '수량', '핸드폰', '기타연락처', '주소', '배송메세지', '상품주문번호', '상품고유코드', '배송방식', '운송장번호', '택배사', '채널'];
+      const colWidths = [10, 16, 30, 6, 10, 28, 6, 16, 16, 40, 22, 20, 14, 12, 16, 12, 8];
 
       const wb = await XlsxPopulate.fromBlankAsync();
       const ws = wb.sheet(0).name('발주서');
@@ -2223,7 +2248,7 @@
       ws.range('D1:P1').style('fill', 'FFFF00');
 
       // 헤더 전체 볼드
-      ws.range('A1:P1').style('bold', true);
+      ws.range('A1:Q1').style('bold', true);
 
       // 데이터 입력
       orders.forEach((o, idx) => {
@@ -2244,13 +2269,14 @@
         ws.cell(r, 14).value('');
         ws.cell(r, 15).value('');
         ws.cell(r, 16).value('');
+        ws.cell(r, 17).value(o.channel || 'naver');
       });
 
       // 컬럼 너비 설정
       colWidths.forEach((w, i) => ws.column(i + 1).width(w));
 
       // 필터 설정
-      ws.range('A1:P' + (orders.length + 1)).autoFilter();
+      ws.range('A1:Q' + (orders.length + 1)).autoFilter();
 
       // 참조 시트
       const refSheet = wb.addSheet('참조');
@@ -2417,9 +2443,10 @@
             if (!row || row.length === 0) continue;
             const productOrderNo = String(row[11] || '').trim(); // L열 (인덱스 11)
             const trackingNo = String(row[14] || '').trim();      // O열 (인덱스 14)
+            const channel = String(row[16] || 'naver').trim().toLowerCase(); // Q열 (인덱스 16)
             if (!productOrderNo) { skippedNoOrderNo++; continue; }
             if (!trackingNo) { skippedNoTracking++; continue; }
-            results.push({ productOrderNo, trackingNo });
+            results.push({ productOrderNo, trackingNo, channel });
           }
           resolve({ results, skippedNoOrderNo, skippedNoTracking });
         };
@@ -2428,38 +2455,65 @@
       });
     }
 
-    // ===== Task 6: 스마트스토어 송장 엑셀 다운로드 =====
+    // ===== Task 6: 송장 엑셀 다운로드 (채널별 분리) =====
     async function downloadTrackingExcel(trackingData) {
-      const wb = await XlsxPopulate.fromBlankAsync();
-      const ws = wb.sheet(0).name('발송처리');
-      const headers = ['상품주문번호', '배송방법', '택배사', '송장번호'];
-      const colWidths = [22, 24, 14, 18];
+      const naverData = trackingData.filter(t => t.channel !== 'coupang');
+      const coupangData = trackingData.filter(t => t.channel === 'coupang');
+      let downloaded = 0;
 
-      // 헤더
-      headers.forEach((h, i) => ws.cell(1, i + 1).value(h));
-      ws.range('A1:D1').style({ bold: true, fill: 'CCCCFF' });
+      // 네이버 송장
+      if (naverData.length > 0) {
+        const wb = await XlsxPopulate.fromBlankAsync();
+        const ws = wb.sheet(0).name('발송처리');
+        const headers = ['상품주문번호', '배송방법', '택배사', '송장번호'];
+        headers.forEach((h, i) => ws.cell(1, i + 1).value(h));
+        ws.range('A1:D1').style({ bold: true, fill: 'CCCCFF' });
+        naverData.forEach((t, idx) => {
+          const r = idx + 2;
+          ws.cell(r, 1).value(String(t.productOrderNo)).style('numberFormat', '@');
+          ws.cell(r, 2).value('택배발송 : 택배,등기,소포');
+          ws.cell(r, 3).value(CONFIG.shipping.courier);
+          ws.cell(r, 4).value(String(t.trackingNo || '')).style('numberFormat', '@');
+        });
+        [22, 24, 14, 18].forEach((w, i) => ws.column(i + 1).width(w));
+        const blob = await wb.outputAsync();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '스마트스토어_송장업로드.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+        downloaded += naverData.length;
+      }
 
-      // 데이터
-      trackingData.forEach((t, idx) => {
-        const r = idx + 2;
-        ws.cell(r, 1).value(String(t.productOrderNo)).style('numberFormat', '@');
-        ws.cell(r, 2).value('택배발송 : 택배,등기,소포');
-        ws.cell(r, 3).value(CONFIG.shipping.courier);
-        ws.cell(r, 4).value(String(t.trackingNo || '')).style('numberFormat', '@');
-      });
+      // 쿠팡 송장
+      if (coupangData.length > 0) {
+        const wb = await XlsxPopulate.fromBlankAsync();
+        const ws = wb.sheet(0).name('발송처리');
+        const headers = ['주문번호', '택배사', '송장번호'];
+        headers.forEach((h, i) => ws.cell(1, i + 1).value(h));
+        ws.range('A1:C1').style({ bold: true, fill: 'FFE0E0' });
+        coupangData.forEach((t, idx) => {
+          const r = idx + 2;
+          ws.cell(r, 1).value(String(t.productOrderNo)).style('numberFormat', '@');
+          ws.cell(r, 2).value(CONFIG.shipping.courier);
+          ws.cell(r, 3).value(String(t.trackingNo || '')).style('numberFormat', '@');
+        });
+        [22, 14, 18].forEach((w, i) => ws.column(i + 1).width(w));
+        const blob = await wb.outputAsync();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '쿠팡_송장업로드.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+        downloaded += coupangData.length;
+      }
 
-      // 컬럼 너비
-      colWidths.forEach((w, i) => ws.column(i + 1).width(w));
-
-      // 다운로드 (.xlsx)
-      const blob = await wb.outputAsync();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = '스마트스토어_송장업로드.xlsx';
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('스마트스토어_송장업로드.xlsx 다운로드 완료', 'success');
+      const parts = [];
+      if (naverData.length > 0) parts.push(`네이버 ${naverData.length}건`);
+      if (coupangData.length > 0) parts.push(`쿠팡 ${coupangData.length}건`);
+      showToast(`송장 다운로드 완료 (${parts.join(' + ')})`, 'success');
     }
 
     // ===== Task 6: localStorage 발송 상태 업데이트 =====
@@ -2494,7 +2548,7 @@
         ${renderWorkflowStepsTab2(1)}
         <div class="card">
           <div class="card-title"><span class="card-icon">🚚</span> 3PL 회신 엑셀 업로드</div>
-          <div class="card-desc">한아원(3PL)에서 회신받은 송장 엑셀 파일(.xlsx/.xls)을 업로드하세요. L열(상품주문번호)과 O열(운송장번호)을 자동으로 읽어 스마트스토어 송장 업로드 형식으로 변환합니다.</div>
+          <div class="card-desc">한아원(3PL)에서 회신받은 송장 엑셀 파일(.xlsx/.xls)을 업로드하세요. L열(상품주문번호), O열(운송장번호), Q열(채널)을 읽어 네이버/쿠팡 송장 파일을 각각 생성합니다.</div>
           <div class="upload-area" id="tab2-upload-area"
                onclick="document.getElementById('tab2-file-input').click()"
                ondragover="handleTab2DragOver(event)"
@@ -2515,12 +2569,18 @@
       const tab2 = document.getElementById('tab2');
       if (!tab2) return;
 
+      const naverCount = results.filter(t => t.channel !== 'coupang').length;
+      const coupangCount = results.filter(t => t.channel === 'coupang').length;
+
       let rows = '';
       results.forEach(t => {
+        const channelBadge = t.channel === 'coupang'
+          ? '<span class="channel-badge channel-coupang">쿠팡</span>'
+          : '<span class="channel-badge channel-naver">네이버</span>';
         rows += `
           <tr>
+            <td style="text-align:center;">${channelBadge}</td>
             <td>${escapeHtml(t.productOrderNo)}</td>
-            <td>${escapeHtml(CONFIG.shipping.method)}</td>
             <td>${escapeHtml(CONFIG.shipping.courier)}</td>
             <td>${escapeHtml(t.trackingNo)}</td>
           </tr>
@@ -2535,7 +2595,7 @@
           <div class="stat-card">
             <div class="stat-label">변환 완료</div>
             <div class="stat-value">${results.length}<span class="stat-unit">건</span></div>
-            <div class="stat-change">송장번호 정상 매핑</div>
+            <div class="stat-change">${naverCount > 0 ? '<span class="channel-badge channel-naver" style="font-size:10px;">네이버 ' + naverCount + '</span> ' : ''}${coupangCount > 0 ? '<span class="channel-badge channel-coupang" style="font-size:10px;">쿠팡 ' + coupangCount + '</span>' : ''}</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">주문번호 없음</div>
@@ -2560,8 +2620,8 @@
             <table>
               <thead>
                 <tr>
+                  <th>채널</th>
                   <th>상품주문번호</th>
-                  <th>배송방법</th>
                   <th>택배사</th>
                   <th>송장번호</th>
                 </tr>
