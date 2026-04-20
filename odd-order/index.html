@@ -2611,6 +2611,7 @@
         <div class="card">
           <div class="card-title"><span class="card-icon">🚚</span> 3PL 회신 엑셀 업로드</div>
           <div class="card-desc">한아원(3PL)에서 회신받은 송장 엑셀 파일(.xlsx/.xls)을 업로드하세요. L열(상품주문번호), O열(운송장번호), Q열(채널)을 읽어 네이버/쿠팡 송장 파일을 각각 생성합니다.</div>
+          <button class="btn btn-secondary" onclick="handleDemoTracking()" style="margin-bottom:12px;">테스트 데이터</button>
           <div class="upload-area" id="tab2-upload-area"
                onclick="document.getElementById('tab2-file-input').click()"
                ondragover="handleTab2DragOver(event)"
@@ -2746,6 +2747,20 @@
     function handleTab2DragOver(event) {
       event.preventDefault();
       document.getElementById('tab2-upload-area')?.classList.add('dragover');
+    }
+
+    // ===== 탭2: 테스트 송장 데이터 =====
+    function handleDemoTracking() {
+      const demoData = [
+        { productOrderNo: '2026040800001', trackingNo: '6123456781', channel: 'naver' },
+        { productOrderNo: '2026040800002', trackingNo: '6123456782', channel: 'naver' },
+        { productOrderNo: '2026040800003', trackingNo: '6123456783', channel: 'coupang' },
+        { productOrderNo: '2026040800004', trackingNo: '6123456784', channel: 'coupang' },
+        { productOrderNo: '2026040800005', trackingNo: '6123456785', channel: 'naver' },
+      ];
+      convertedTracking = demoData;
+      showToast(`테스트 송장 ${demoData.length}건 로드 (네이버 3 + 쿠팡 2)`, 'success');
+      renderTab2Preview(demoData, 0, 0);
     }
 
     function handleTab2DragLeave(event) {
