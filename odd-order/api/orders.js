@@ -4,12 +4,11 @@ const NAVER_API_BASE = 'https://api.commerce.naver.com/external/v1';
 
 async function getAccessToken() {
   const clientId = process.env.NAVER_CLIENT_ID;
-  const secretB64 = process.env.NAVER_CLIENT_SECRET_B64;
+  const clientSecret = process.env.NAVER_CLIENT_SECRET;
 
-  if (!clientId || !secretB64) {
-    throw new Error('NAVER_CLIENT_ID 또는 NAVER_CLIENT_SECRET_B64 환경변수가 설정되지 않았습니다.');
+  if (!clientId || !clientSecret) {
+    throw new Error('NAVER_CLIENT_ID 또는 NAVER_CLIENT_SECRET 환경변수가 설정되지 않았습니다.');
   }
-  const clientSecret = Buffer.from(secretB64, 'base64').toString('utf-8');
 
   const timestamp = Date.now();
   const password = `${clientId}_${timestamp}`;
