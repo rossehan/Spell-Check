@@ -2327,8 +2327,8 @@
     async function downloadOrderExcel(orders) {
       const now = new Date();
       const today = `${String(now.getFullYear()).slice(2)}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
-      const headers = ['보내는분', '보내는분 연락처', '주소', '번호', '수취인명', '상품명', '수량', '핸드폰', '기타연락처', '주소', '배송메세지', '상품주문번호', '상품고유코드', '배송방식', '운송장번호', '택배사', '채널', '묶음배송번호', '옵션ID'];
-      const colWidths = [10, 16, 30, 6, 10, 28, 6, 16, 16, 40, 22, 20, 14, 12, 16, 12, 8, 16, 16];
+      const headers = ['보내는분', '보내는분 연락처', '주소', '번호', '수취인명', '상품명', '수량', '핸드폰', '기타연락처', '주소', '배송메세지', '상품주문번호', '상품고유코드', '배송방식', '운송장번호', '택배사'];
+      const colWidths = [10, 16, 30, 6, 10, 28, 6, 16, 16, 40, 22, 20, 14, 12, 16, 12];
 
       const wb = await XlsxPopulate.fromBlankAsync();
       const ws = wb.sheet(0).name('발주서');
@@ -2340,7 +2340,7 @@
       ws.range('D1:P1').style('fill', 'FFFF00');
 
       // 헤더 전체 볼드
-      ws.range('A1:S1').style('bold', true);
+      ws.range('A1:P1').style('bold', true);
 
       // 데이터 입력
       orders.forEach((o, idx) => {
@@ -2356,21 +2356,18 @@
         ws.cell(r, 9).value(String(o.phone2 || '')).style('numberFormat', '@');
         ws.cell(r, 10).value(o.address);
         ws.cell(r, 11).value(o.message);
-        ws.cell(r, 12).value(String(o.productOrderNo)).style('numberFormat', '@');
+        ws.cell(r, 12).value('');
         ws.cell(r, 13).value(o.productCode);
         ws.cell(r, 14).value('');
         ws.cell(r, 15).value('');
         ws.cell(r, 16).value('');
-        ws.cell(r, 17).value(o.channel || 'naver');
-        ws.cell(r, 18).value(String(o.shipmentBoxId || '')).style('numberFormat', '@');
-        ws.cell(r, 19).value(String(o.vendorItemId || '')).style('numberFormat', '@');
       });
 
       // 컬럼 너비 설정
       colWidths.forEach((w, i) => ws.column(i + 1).width(w));
 
       // 필터 설정
-      ws.range('A1:S' + (orders.length + 1)).autoFilter();
+      ws.range('A1:P' + (orders.length + 1)).autoFilter();
 
       // 참조 시트
       const refSheet = wb.addSheet('참조');
@@ -2537,6 +2534,7 @@
           const headerRow = rows[0] || [];
           let colOrder = -1, colTracking = -1, colChannel = -1;
           let colShipmentBox = -1, colVendorItem = -1;
+          let colRecipient = -1, colPhone = -1, colProduct = -1;
           let isCoupangFormat = false;
           headerRow.forEach((h, idx) => {
             const val = String(h).trim();
@@ -2545,37 +2543,112 @@
             if (val === '채널') colChannel = idx;
             if (val === '묶음배송번호') { isCoupangFormat = true; colShipmentBox = idx; }
             if (val === '옵션ID') colVendorItem = idx;
+            if (val === '수취인명') colRecipient = idx;
+            if (val === '핸드폰') colPhone = idx;
+            if (val === '상품명') colProduct = idx;
           });
 
-          // 헤더 감지 실패 시 기존 고정 위치 사용
-          if (colOrder === -1) colOrder = 11;
+          // 헤더 감지 실패 시 기본 위치 (고고창고/한아원 양식 기준)
           if (colTracking === -1) colTracking = 14;
+          if (colRecipient === -1) colRecipient = 4;
+          if (colPhone === -1) colPhone = 7;
+          if (colProduct === -1) colProduct = 5;
 
           // 쿠팡 DeliveryList 형식이면 채널 자동 설정
-          const defaultChannel = isCoupangFormat ? 'coupang' : 'naver';
+          const defaultChannel = isCoupangFormat ? 'coupang' : '';
 
-          console.log('[parseTracking] 감지된 열:', { colOrder, colTracking, colChannel, isCoupangFormat });
+          console.log('[parseTracking] 감지된 열:', { colOrder, colTracking, colChannel, colRecipient, colPhone, colProduct, isCoupangFormat });
 
           for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             if (!row || row.length === 0) continue;
-            const productOrderNo = String(row[colOrder] || '').trim();
+
             const trackingNo = String(row[colTracking] || '').trim();
+            if (!trackingNo) { skippedNoTracking++; continue; }
+
+            const productOrderNo = colOrder >= 0 ? String(row[colOrder] || '').trim() : '';
             const channel = colChannel >= 0
               ? String(row[colChannel] || defaultChannel).trim().toLowerCase()
               : defaultChannel;
-            if (!productOrderNo) { skippedNoOrderNo++; continue; }
-            if (!trackingNo) { skippedNoTracking++; continue; }
-            const entry = { productOrderNo, trackingNo, channel };
-            if (colShipmentBox >= 0) entry.shipmentBoxId = String(row[colShipmentBox] || '').trim();
-            if (colVendorItem >= 0) entry.vendorItemId = String(row[colVendorItem] || '').trim();
-            results.push(entry);
+
+            // 상품주문번호 + 채널이 모두 있으면 직접 사용 (기존 방식 / 쿠팡 DeliveryList)
+            if (productOrderNo && channel) {
+              const entry = { productOrderNo, trackingNo, channel };
+              if (colShipmentBox >= 0) entry.shipmentBoxId = String(row[colShipmentBox] || '').trim();
+              if (colVendorItem >= 0) entry.vendorItemId = String(row[colVendorItem] || '').trim();
+              results.push(entry);
+            } else {
+              // 수취인 정보로 매칭 필요 (고고창고 회신 양식)
+              const recipientName = String(row[colRecipient] || '').trim();
+              const phone = String(row[colPhone] || '').trim();
+              const productName = String(row[colProduct] || '').trim();
+
+              if (!recipientName && !phone) { skippedNoOrderNo++; continue; }
+
+              results.push({
+                productOrderNo: '',
+                trackingNo,
+                channel: '',
+                _recipientName: recipientName,
+                _phone: phone,
+                _productName: productName,
+                _needsMatching: true,
+              });
+            }
           }
           resolve({ results, skippedNoOrderNo, skippedNoTracking });
         };
         reader.onerror = reject;
         reader.readAsArrayBuffer(file);
       });
+    }
+
+    // ===== 수취인 정��� 매칭 (고고창고 회신 → 원본 주문 연결) =====
+    function normalizeForMatch(str) {
+      return String(str || '').replace(/[\s\-\(\)]/g, '');
+    }
+
+    function matchTrackingToOrders(parsedRows, orders) {
+      const results = [];
+      let skippedNoMatch = 0;
+
+      // 주문 목록으로 매칭 맵 구축: 수취인명+핸드폰+상품명 → [주문]
+      const orderMap = new Map();
+      orders.forEach(o => {
+        const key = normalizeForMatch(o.recipientName) + '|' + normalizeForMatch(o.phone) + '|' + normalizeForMatch(o.productName);
+        if (!orderMap.has(key)) orderMap.set(key, []);
+        orderMap.get(key).push(o);
+      });
+
+      const usedOrderNos = new Set();
+
+      for (const row of parsedRows) {
+        if (!row._needsMatching) {
+          results.push(row);
+          continue;
+        }
+
+        const key = normalizeForMatch(row._recipientName) + '|' + normalizeForMatch(row._phone) + '|' + normalizeForMatch(row._productName);
+        const candidates = orderMap.get(key);
+
+        if (candidates && candidates.length > 0) {
+          const match = candidates.find(c => !usedOrderNos.has(c.productOrderNo));
+          if (match) {
+            usedOrderNos.add(match.productOrderNo);
+            results.push({
+              productOrderNo: match.productOrderNo,
+              trackingNo: row.trackingNo,
+              channel: match.channel,
+              shipmentBoxId: match.shipmentBoxId || '',
+              vendorItemId: match.vendorItemId || '',
+            });
+            continue;
+          }
+        }
+        skippedNoMatch++;
+      }
+
+      return { results, skippedNoMatch };
     }
 
     // ===== Task 6: 송장 엑셀 다운로드 (채널별 분리) =====
@@ -2696,7 +2769,7 @@
     }
 
     // ===== Task 6: 탭2 미리보기 테이블 렌더링 =====
-    function renderTab2Preview(results, skippedNoOrderNo, skippedNoTracking) {
+    function renderTab2Preview(results, skippedNoOrderNo, skippedNoTracking, isMatchingMode) {
       const tab2 = document.getElementById('tab2');
       if (!tab2) return;
 
@@ -2729,9 +2802,9 @@
             <div class="stat-change">${naverCount > 0 ? '<span class="channel-badge channel-naver" style="font-size:10px;">네이버 ' + naverCount + '</span> ' : ''}${coupangCount > 0 ? '<span class="channel-badge channel-coupang" style="font-size:10px;">쿠팡 ' + coupangCount + '</span>' : ''}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">주문번호 없음</div>
+            <div class="stat-label">${isMatchingMode ? '미매칭' : '주문번호 없음'}</div>
             <div class="stat-value" style="color:#d97706;">${skippedNoOrderNo}<span class="stat-unit">건</span></div>
-            <div class="stat-change">L열 비어있어 제외됨</div>
+            <div class="stat-change">${isMatchingMode ? '주문 목록에서 찾을 수 없음' : 'L열 비어있어 제외됨'}</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">송장번호 없음</div>
@@ -2804,13 +2877,27 @@
       }
       try {
         showToast('파일 읽는 중...', 'info', 1500);
-        const { results, skippedNoOrderNo, skippedNoTracking } = await parseTrackingExcel(file);
+        const { results: parsed, skippedNoOrderNo, skippedNoTracking } = await parseTrackingExcel(file);
 
-        // 모듈 수준 변수에 저장
-        convertedTracking = results;
+        const needsMatching = parsed.some(r => r._needsMatching);
 
-        showToast(`변환 완료: ${results.length}건 (제외 ${skippedNoOrderNo + skippedNoTracking}건)`, 'success');
-        renderTab2Preview(results, skippedNoOrderNo, skippedNoTracking);
+        if (needsMatching) {
+          // 고고창고 회신 양식 → 수취인 정보로 주문 매칭 필요
+          if (!convertedOrders || convertedOrders.length === 0) {
+            showToast('먼저 주문을 가져와주세요. (탭1 → 주문 가져오기)', 'warning', 5000);
+            return;
+          }
+          const { results: matched, skippedNoMatch } = matchTrackingToOrders(parsed, convertedOrders);
+          convertedTracking = matched;
+          const total = matched.length + skippedNoMatch + skippedNoTracking;
+          showToast(`매칭 완료: ${matched.length}건 (미매칭 ${skippedNoMatch}건, 송장없음 ${skippedNoTracking}건)`, matched.length > 0 ? 'success' : 'warning');
+          renderTab2Preview(matched, skippedNoMatch, skippedNoTracking, true);
+        } else {
+          // 기존 방식 (상품주문번호+채널이 있는 파일)
+          convertedTracking = parsed;
+          showToast(`변환 완료: ${parsed.length}건 (제외 ${skippedNoOrderNo + skippedNoTracking}건)`, 'success');
+          renderTab2Preview(parsed, skippedNoOrderNo, skippedNoTracking, false);
+        }
       } catch (err) {
         console.error(err);
         showToast('파일 파싱 오류: ' + (err.message || '알 수 없는 오류'), 'error');
