@@ -96,6 +96,9 @@ function normalizeCoupangOrders(rawData) {
     const receiver = sheet.receiver || {};
     const items = Array.isArray(sheet.orderItems) ? sheet.orderItems : [];
 
+    // 디버깅: receiver 객체의 실제 필드 확인
+    console.log('[coupang] receiver keys:', Object.keys(receiver), JSON.stringify(receiver).slice(0, 500));
+
     return items.map((item) => ({
       channel: 'coupang',
       // 네이버와 통일된 키 이름 사용 (client가 동일 shape으로 다룸)
@@ -103,7 +106,7 @@ function normalizeCoupangOrders(rawData) {
       // 매칭은 vendorItemId로 (텍스트는 displayOption으로 보존)
       matchKey: String(item.vendorItemId ?? ''),
       recipientName: receiver.name ?? '',
-      phone: receiver.receiverNumber1 ?? '',
+      phone: receiver.safeNumber ?? receiver.receiverNumber1 ?? '',
       phone2: receiver.receiverNumber2 ?? '',
       baseAddress: receiver.addr1 ?? '',
       detailedAddress: receiver.addr2 ?? '',
