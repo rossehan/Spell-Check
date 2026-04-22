@@ -103,6 +103,9 @@ function normalizeCoupangOrders(rawData) {
       channel: 'coupang',
       // 네이버와 통일된 키 이름 사용 (client가 동일 shape으로 다룸)
       productOrderId: String(sheet.orderId ?? ''),
+      // 송장 등록에 필요한 ID들
+      shipmentBoxId: String(sheet.shipmentBoxId ?? ''),
+      vendorItemId: String(item.vendorItemId ?? ''),
       // 매칭은 vendorItemId로 (텍스트는 displayOption으로 보존)
       matchKey: String(item.vendorItemId ?? ''),
       recipientName: receiver.name ?? '',

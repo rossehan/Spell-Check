@@ -2202,6 +2202,8 @@
             address: ((o.baseAddress || '') + ' ' + (o.detailedAddress || '')).trim(),
             message: o.deliveryMemo || '',
             productOrderNo: o.productOrderId,
+            shipmentBoxId: o.shipmentBoxId || '',
+            vendorItemId: o.vendorItemId || '',
             amount: o.totalPaymentAmount || 0,
             option: o.productOption || '',
             orderedAt: o.orderDate || ''
@@ -2325,8 +2327,8 @@
     async function downloadOrderExcel(orders) {
       const now = new Date();
       const today = `${String(now.getFullYear()).slice(2)}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
-      const headers = ['보내는분', '보내는분 연락처', '주소', '번호', '수취인명', '상품명', '수량', '핸드폰', '기타연락처', '주소', '배송메세지', '상품주문번호', '상품고유코드', '배송방식', '운송장번호', '택배사', '채널'];
-      const colWidths = [10, 16, 30, 6, 10, 28, 6, 16, 16, 40, 22, 20, 14, 12, 16, 12, 8];
+      const headers = ['보내는분', '보내는분 연락처', '주소', '번호', '수취인명', '상품명', '수량', '핸드폰', '기타연락처', '주소', '배송메세지', '상품주문번호', '상품고유코드', '배송방식', '운송장번호', '택배사', '채널', '묶음배송번호', '옵션ID'];
+      const colWidths = [10, 16, 30, 6, 10, 28, 6, 16, 16, 40, 22, 20, 14, 12, 16, 12, 8, 16, 16];
 
       const wb = await XlsxPopulate.fromBlankAsync();
       const ws = wb.sheet(0).name('발주서');
@@ -2338,7 +2340,7 @@
       ws.range('D1:P1').style('fill', 'FFFF00');
 
       // 헤더 전체 볼드
-      ws.range('A1:Q1').style('bold', true);
+      ws.range('A1:S1').style('bold', true);
 
       // 데이터 입력
       orders.forEach((o, idx) => {
@@ -2360,13 +2362,15 @@
         ws.cell(r, 15).value('');
         ws.cell(r, 16).value('');
         ws.cell(r, 17).value(o.channel || 'naver');
+        ws.cell(r, 18).value(String(o.shipmentBoxId || '')).style('numberFormat', '@');
+        ws.cell(r, 19).value(String(o.vendorItemId || '')).style('numberFormat', '@');
       });
 
       // 컬럼 너비 설정
       colWidths.forEach((w, i) => ws.column(i + 1).width(w));
 
       // 필터 설정
-      ws.range('A1:Q' + (orders.length + 1)).autoFilter();
+      ws.range('A1:S' + (orders.length + 1)).autoFilter();
 
       // 참조 시트
       const refSheet = wb.addSheet('참조');
@@ -2939,12 +2943,24 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              orders: coupangOrders.map(o => ({
-                orderId: o.productOrderNo,
-                trackingNumber: o.trackingNo,
-                shipmentBoxId: o.shipmentBoxId || '',
-                vendorItemId: o.vendorItemId || '',
-              })),
+              orders: coupangOrders.map(o => {
+                let sbId = o.shipmentBoxId || '';
+                let viId = o.vendorItemId || '';
+                // 파싱된 데이터에 없으면 convertedOrders에서 매칭
+                if ((!sbId || !viId) && convertedOrders) {
+                  const match = convertedOrders.find(c => c.channel === 'coupang' && c.productOrderNo === o.productOrderNo);
+                  if (match) {
+                    sbId = sbId || match.shipmentBoxId || '';
+                    viId = viId || match.vendorItemId || '';
+                  }
+                }
+                return {
+                  orderId: o.productOrderNo,
+                  trackingNumber: o.trackingNo,
+                  shipmentBoxId: sbId,
+                  vendorItemId: viId,
+                };
+              }),
               deliveryCompanyCode: courierCode,
             }),
           });
