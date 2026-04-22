@@ -37,44 +37,58 @@ async function coupangFetch({ method, path, query, body, accessKey, secretKey })
 }
 
 /**
- * orderId로 발주서 단건 조회 → shipmentBoxId + vendorItemId 목록 반환
- * shipmentBoxId는 18자리 정수 → JSON 파싱 시 정밀도 유지를 위해 문자열로 추출
+ * 최근 주문 목록 조회 → orderId→[{shipmentBoxId, vendorItemId}] 매핑 구축
+ *
+ * 단건 조회 엔드포인트(/ordersheets/{id})는 실제로 shipmentBoxId를 기대하므로
+ * orderId로는 사용할 수 없다. 대신 목록 조회(coupang-orders.js와 동일)로
+ * 최근 7일간 ACCEPT+INSTRUCT 주문을 가져와서 orderId 기반 매핑을 만든다.
  */
-async function getOrderSheetInfo(orderId, { accessKey, secretKey, vendorId }) {
-  const path = `${API_PATH_PREFIX}/${vendorId}/ordersheets/${orderId}`;
-  const res = await coupangFetch({ method: 'GET', path, accessKey, secretKey });
+async function buildOrderIdMapping({ accessKey, secretKey, vendorId }) {
+  const now = new Date();
+  const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const kstFrom = new Date(kstNow.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const createdAtFrom = kstFrom.toISOString().slice(0, 10);
+  const createdAtTo = kstNow.toISOString().slice(0, 10);
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`발주서 조회 실패 (orderId: ${orderId}, ${res.status}): ${text.slice(0, 300)}`);
-  }
+  const mapping = new Map();
 
-  // shipmentBoxId가 18자리 정수라 Number.MAX_SAFE_INTEGER 초과 가능
-  // → JSON 파싱 전에 문자열로 변환하여 정밀도 유지
-  const rawText = await res.text();
-  const safeText = rawText.replace(/"shipmentBoxId"\s*:\s*(\d+)/g, '"shipmentBoxId":"$1"');
-  const data = JSON.parse(safeText);
+  for (const status of ['ACCEPT', 'INSTRUCT']) {
+    const path = `${API_PATH_PREFIX}/${vendorId}/ordersheets`;
+    const query =
+      `createdAtFrom=${createdAtFrom}` +
+      `&createdAtTo=${createdAtTo}` +
+      `&status=${status}` +
+      `&maxPerPage=50`;
 
-  const sheets = Array.isArray(data.data) ? data.data : [data.data];
+    const res = await coupangFetch({ method: 'GET', path, query, accessKey, secretKey });
 
-  const results = [];
-  for (const sheet of sheets) {
-    if (!sheet) continue;
-    const items = Array.isArray(sheet.orderItems) ? sheet.orderItems : [];
-    for (const item of items) {
-      results.push({
-        shipmentBoxId: String(sheet.shipmentBoxId),
-        orderId: String(sheet.orderId),
-        vendorItemId: String(item.vendorItemId),
-      });
+    if (!res.ok) {
+      console.warn(`[buildOrderIdMapping] status=${status} 조회 실패: ${res.status}`);
+      continue;
+    }
+
+    const rawText = await res.text();
+    const safeText = rawText.replace(/"shipmentBoxId"\s*:\s*(\d+)/g, '"shipmentBoxId":"$1"');
+    const data = JSON.parse(safeText);
+    const sheets = Array.isArray(data?.data) ? data.data : [];
+
+    console.log(`[buildOrderIdMapping] status=${status}, sheets=${sheets.length}`);
+
+    for (const sheet of sheets) {
+      const orderId = String(sheet.orderId ?? '');
+      const items = Array.isArray(sheet.orderItems) ? sheet.orderItems : [];
+      for (const item of items) {
+        if (!mapping.has(orderId)) mapping.set(orderId, []);
+        mapping.get(orderId).push({
+          shipmentBoxId: String(sheet.shipmentBoxId ?? ''),
+          orderId,
+          vendorItemId: String(item.vendorItemId ?? ''),
+        });
+      }
     }
   }
 
-  if (results.length === 0) {
-    throw new Error(`발주서 정보 없음 (orderId: ${orderId})`);
-  }
-
-  return results;
+  return mapping;
 }
 
 /**
@@ -121,48 +135,54 @@ export default async function handler(req, res) {
       vendorId: COUPANG_VENDOR_ID,
     };
 
-    // 1단계: 각 orderId에 대해 shipmentBoxId 조회
+    // 1단계: orderId → shipmentBoxId 매핑 구축 (목록 조회 사용)
     const invoiceDtos = [];
     const allShipmentBoxIds = new Set();
     const errors = [];
 
     console.log('[coupang-invoice] 요청 orders:', JSON.stringify(orders));
 
+    // 프론트에서 shipmentBoxId가 안 온 주문이 하나라도 있으면 매핑 조회
+    const needsMapping = orders.some(o => !o.shipmentBoxId || !o.vendorItemId);
+    let orderIdMap = null;
+    if (needsMapping) {
+      orderIdMap = await buildOrderIdMapping(creds);
+      console.log(`[coupang-invoice] 매핑 구축 완료: ${orderIdMap.size}개 orderId`);
+    }
+
     for (const order of orders) {
       try {
-        // shipmentBoxId가 이미 있으면 (쿠팡 DeliveryList) ordersheets 조회 건너뛰기
-        if (order.shipmentBoxId && order.vendorItemId) {
-          console.log(`[coupang-invoice] 직접 등록: orderId=${order.orderId}, shipmentBoxId=${order.shipmentBoxId}`);
-          allShipmentBoxIds.add(order.shipmentBoxId);
-          invoiceDtos.push({
-            shipmentBoxId: Number(order.shipmentBoxId),
-            orderId: Number(order.orderId),
-            vendorItemId: Number(order.vendorItemId),
-            deliveryCompanyCode: deliveryCompanyCode || 'CJGLS',
-            invoiceNumber: order.trackingNumber,
-            splitShipping: false,
-            preSplitShipped: false,
-            estimatedShippingDate: '',
-          });
-        } else {
-          // ordersheets 조회 필요 (앱 자체 발주서 형식)
-          console.log(`[coupang-invoice] orderId=${order.orderId} 조회 시작`);
-          const sheetInfos = await getOrderSheetInfo(order.orderId, creds);
-          console.log(`[coupang-invoice] orderId=${order.orderId} 조회 성공:`, JSON.stringify(sheetInfos));
-          for (const info of sheetInfos) {
-            allShipmentBoxIds.add(info.shipmentBoxId);
-            invoiceDtos.push({
-              shipmentBoxId: Number(info.shipmentBoxId),
-              orderId: Number(info.orderId),
-              vendorItemId: Number(info.vendorItemId),
-              deliveryCompanyCode: deliveryCompanyCode || 'CJGLS',
-              invoiceNumber: order.trackingNumber,
-              splitShipping: false,
-              preSplitShipped: false,
-              estimatedShippingDate: '',
-            });
+        let shipmentBoxId = order.shipmentBoxId || '';
+        let vendorItemId = order.vendorItemId || '';
+
+        // shipmentBoxId가 없으면 매핑에서 찾기
+        if (!shipmentBoxId || !vendorItemId) {
+          const infos = orderIdMap?.get(String(order.orderId));
+          if (!infos || infos.length === 0) {
+            throw new Error(`주문 매핑 없음 (orderId: ${order.orderId}) - 쿠팡 주문 목록에서 찾을 수 없습니다.`);
           }
+          // 첫 번째 매칭 사용 (vendorItemId가 제공된 경우 정확 매칭 시도)
+          const match = vendorItemId
+            ? infos.find(i => i.vendorItemId === vendorItemId) || infos[0]
+            : infos[0];
+          shipmentBoxId = match.shipmentBoxId;
+          vendorItemId = match.vendorItemId;
+          console.log(`[coupang-invoice] 매핑 조회: orderId=${order.orderId} → shipmentBoxId=${shipmentBoxId}, vendorItemId=${vendorItemId}`);
+        } else {
+          console.log(`[coupang-invoice] 직접 등록: orderId=${order.orderId}, shipmentBoxId=${shipmentBoxId}`);
         }
+
+        allShipmentBoxIds.add(shipmentBoxId);
+        invoiceDtos.push({
+          shipmentBoxId: Number(shipmentBoxId),
+          orderId: Number(order.orderId),
+          vendorItemId: Number(vendorItemId),
+          deliveryCompanyCode: deliveryCompanyCode || 'CJGLS',
+          invoiceNumber: order.trackingNumber,
+          splitShipping: false,
+          preSplitShipped: false,
+          estimatedShippingDate: '',
+        });
       } catch (err) {
         errors.push({ orderId: order.orderId, error: err.message });
       }
