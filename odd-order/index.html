@@ -2986,6 +2986,13 @@
         } else {
           html += `<div style="padding:8px 12px;background:#fef2f2;border-radius:6px;margin-bottom:6px;color:#991b1b;font-size:13px;">
             <span class="channel-badge channel-coupang">쿠팡</span> 실패: ${escapeHtml(cp?.error || '알 수 없는 오류')}</div>`;
+          if (cp?.errors && cp.errors.length > 0) {
+            html += `<div style="padding:6px 12px;background:#fef2f2;border-radius:6px;margin-bottom:6px;color:#991b1b;font-size:11px;max-height:120px;overflow-y:auto;">`;
+            cp.errors.forEach(e => {
+              html += `<div>주문 ${escapeHtml(String(e.orderId))}: ${escapeHtml(e.error)}</div>`;
+            });
+            html += `</div>`;
+          }
         }
       }
 

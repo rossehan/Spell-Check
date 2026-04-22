@@ -126,9 +126,13 @@ export default async function handler(req, res) {
     const allShipmentBoxIds = new Set();
     const errors = [];
 
+    console.log('[coupang-invoice] 요청 orders:', JSON.stringify(orders));
+
     for (const order of orders) {
       try {
+        console.log(`[coupang-invoice] orderId=${order.orderId} 조회 시작`);
         const sheetInfos = await getOrderSheetInfo(order.orderId, creds);
+        console.log(`[coupang-invoice] orderId=${order.orderId} 조회 성공:`, JSON.stringify(sheetInfos));
         for (const info of sheetInfos) {
           allShipmentBoxIds.add(info.shipmentBoxId);
           invoiceDtos.push({
